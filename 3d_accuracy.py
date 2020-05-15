@@ -1148,53 +1148,113 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
     # # print(tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True))
     # # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
     # # print(df7_title.index)
-    # tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
-    #
-    # for tkey, tdata in tvalidData.groupby(['title']):
-    #     # print(tkey,'\n', tdata)
-    #     print(tkey,'\n', np.array(tdata[['tx','ty','tz']].reset_index(drop=True)))
-    #     # for tdata in tData[~tData['point_name'].str.contains('\*')]:
-    #     # tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
-    #     # print(tData[~tData['point_name'].str.contains('\*') and tData['title'] == tname].reset_index(drop=True))
-    #     # print(tdata)
+
+
+    tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
+    print('tvalidData', tvalidData)
+    tmodifiedData = tvalidData
+
+
+    for tidx in df9_group_sub.index:
+        print(tidx)
+        for tkey, tdata in tvalidData.groupby(['title']):
+            print(tkey,tdata)
+            for tkey2, tdata2 in tvalidData.groupby(['title', 'group_sub']):
+                print(tkey2, tdata2)
+        # for test in df5_list:
+        #     if(tidx == tkey):
+        #         print(tkey, tdata)
+        # print(tidx, tdata[0], tdata[1])
+        # for (tcol_title,tcol_group_sub), tdata in tvalidData.groupby(['title', 'group_sub']):
+        #     print(tcol_title, tcol_group_sub)
+        #     if(tcol_group_sub == tlabel):
+        #     if(tkey[1] == )
+        #         print(tlabel, '\n', np.array(tdata[['tx', 'ty', 'tz']].reset_index(drop=True)))
+    print("TTTTTTTTTTTTTT")
+
+
+    for tidx, (tcount, tlabel) in enumerate(tData_grp):
+        print(tidx, tcount, tlabel)
+        # print(tidx, tdata[0], tdata[1])
+        for (tcol_title,tcol_group_sub), tdata in tvalidData.groupby(['title', 'group_sub']):
+            print(tcol_title, tcol_group_sub)
+            if(tcol_group_sub == tlabel):
+            # if(tkey[1] == )
+                print(tlabel, '\n', np.array(tdata[['tx', 'ty', 'tz']].reset_index(drop=True)))
+
+    for tkey, tdata in tvalidData.groupby(['title', 'group_sub']):
+        # print(tkey,'\n', tdata)
+        print(tkey,'\n', np.array(tdata[['tx','ty','tz']].reset_index(drop=True)))
+        # for tdata in tData[~tData['point_name'].str.contains('\*')]:
+        # tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
+        # print(tData[~tData['point_name'].str.contains('\*') and tData['title'] == tname].reset_index(drop=True))
+        # print(tdata)
 
     aaaa = np.asmatrix(
-        [[0.05275733, 0.05546150, 0.68189180],
-        [-0.03844010, 0.05551325, 0.68174564],
-         [0.05272513, 0.05615994, 0.68205637],
-         [-0.03844701, 0.05623544, 0.68207299],
-         [0, 0, 0]
+        [[-0.148,	-0.918,	-0.113],
+        [172.003,	-0.157,	-175.397],
+        [170.573,	-1.146,	-1.093],
+        [346.334,	-0.113,	-0.086],
+        [169.74,	-0.87,	175.04]
 
          ]
     )
     bbbb = np.asmatrix(
-        [[0.05170413, 0.04383491, 0.67118156],
-        [-0.04397970, 0.04565038, 0.67615679],
-         [0.05168267, 0.04461719, 0.67123584],
-         [-0.04395639, 0.04648941, 0.67657767],
-         [0, 0, 0]
+        [[ -0.0430,     0.0524,    -0.4531],
+        [172.1681,     0.5869,  -175.6547],
+        [170.6656,    -0.4372,    -1.3547],
+        [346.4195,     0.1522,    -0.2835],
+        [169.7624,    -0.2780,   174.7639]
          ]
     )
 
-    rrrrr = m_findTransformedPoints(aaaa[0:5],bbbb[0:5],aaaa)
+    # p660P = np.asmatrix(
+    #     [[-0.148,	-0.918,	-0.113],
+    #     [172.003,	-0.157,	-175.397],
+    #     [170.573,	-1.146,	-1.093],
+    #     [346.334,	-0.113,	-0.086],
+    #     [169.74,	-0.87,	175.04]]
+    #     )
+    # p550N = np.asmatrix(
+    #     [[ -0.0430,     0.0524,    -0.4531],
+    #     [172.1681,     0.5869,  -175.6547],
+    #     [170.6656,    -0.4372,    -1.3547],
+    #     [346.4195,     0.1522,    -0.2835],
+    #     [169.7624,    -0.2780,   174.7639]]
+    #     )
+
+    rrrrr = m_findTransformedPoints(aaaa,bbbb,aaaa)
+    print('rrrrr\n', rrrrr)
     tR, tT = rigid_transform_3D(aaaa, bbbb)
 
     print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
 
     print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
-    print('rrrrr\n', rrrrr)
 
-    # print("///" * 50)
+    # print('camera', *((cv2.Rodrigues(tR)[0] * aaaa[0:5].T).T + np.asmatrix(tT)), sep='\n')
+    print(aaaa[0:5].T.shape, tT.shape, tR.shape)
+    print('1', (tR * aaaa[0:5].T).T )
+    print('2', tT.T )
+    result = (tR * aaaa.T).T + tT.T
+    print('RT -> camera', *result , sep='\n')
+    # print('camera', (tR * aaaa[0:5]).T + np.asmatrix(tT), sep='\n')
+
+    print('rollback RT -> camera_2', *((result - tT.T) * tR), sep='\n')
+
+
+
     #
-    # for tcount, tname in tData_grp:
-    #     # print(x)
-    #     # print(tData[tData.group_sub == x])
-    #     for y in tData.itertuples(index=False, name='Pandas'):
-    #         # print(getattr(y, "point_name"), getattr(y, "group_sub"))
-    #         # ta = getattr(y, "point_name")
-    #         # tb = getattr(y, "group_sub")
-    #         if (tname == getattr(y, "group_sub")):
-    #             print('match', y)
+    # # print("///" * 50)
+    # #
+    # # for tcount, tname in tData_grp:
+    # #     # print(x)
+    # #     # print(tData[tData.group_sub == x])
+    # #     for y in tData.itertuples(index=False, name='Pandas'):
+    # #         # print(getattr(y, "point_name"), getattr(y, "group_sub"))
+    # #         # ta = getattr(y, "point_name")
+    # #         # tb = getattr(y, "group_sub")
+    # #         if (tname == getattr(y, "group_sub")):
+    # #             print('match', y)
     return
 
 def check_face_pos_GT_based_on_MRA2_CAD_displaycenter(): #미완성
@@ -1284,10 +1344,11 @@ def check_face_pos_GT_based_on_MRA2_CAD_displaycenter(): #미완성
     p550N_merge = np.concatenate((p550N_name, p550N_Pattern, p550N_Eye, np.mean(p550N_Eye, axis=0) ))
 
     pDCenter, Rc, Tc = m_ProjectDispCoor(p550N_merge, p550N_Pattern)
+    print('pDCenter', pDCenter)
     # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
 
     pDCenter_merge = np.concatenate((pDCenter, nGT, [[0 ,0, 0]], [[1 ,0, 0]], [[11.56351826, 46.22008096, 52.38411943]]))
-    print(pDCenter_merge)
+    print('pDCenter_merge', pDCenter_merge)
 
     #camera to display center
     T_sample_778569 = np.asmatrix([-13.253501, - 46.178298, - 52.019384])
@@ -1321,32 +1382,126 @@ def check_face_pos_GT_based_on_MRA2_CAD_displaycenter(): #미완성
     return
 
 def test():
-    aaaa = np.asmatrix(
-        [[0.05275733, 0.05546150, 0.68189180],
-        [-0.03844010, 0.05551325, 0.68174564],
-         [0.05272513, 0.05615994, 0.68205637],
-         [-0.03844701, 0.05623544, 0.68207299],
-         [0, 0, 0]
-
-         ]
-    )
-    bbbb = np.asmatrix(
-        [[0.05170413, 0.04383491, 0.67118156],
-        [-0.04397970, 0.04565038, 0.67615679],
-         [0.05168267, 0.04461719, 0.67123584],
-         [-0.04395639, 0.04648941, 0.67657767],
+    mst_739106_01_NG = np.asmatrix(
+        [[0.08195928, 0.10489032, 0.69267075],
+        [0.17728222, 0.10925468, 0.69065354],
+         [0.08181136, 0.10193214, 0.65129581],
+         [0.17674347, 0.10588553, 0.64905204],
+         [0.08011092, 0.10417334, 0.65523652],
+         [0.17484469, 0.10845659, 0.65260795],
          [0, 0, 0]
          ]
     )
+    mst_739106_02_NG  = np.asmatrix(
+        [[0.07992614, 0.10851276, 0.69048120],
+        [0.17564883, 0.11238760, 0.69422094],
+         [0.08002846, 0.10547352, 0.65082413],
+         [0.17480817, 0.10970294, 0.64958008],
+         [0.07812445, 0.10771254, 0.65515808],
+         [0.17242126, 0.11228639, 0.65107764],
+         [0, 0, 0]
+         ]
+    )
 
-    rrrrr = m_findTransformedPoints(aaaa[0:5],bbbb[0:5],aaaa)
-    tR, tT = rigid_transform_3D(aaaa, bbbb)
+    mst_739106_03_NG = np.asmatrix(
+        [[0.08080904, 0.08298502, 0.69747400],
+        [0.17585388, 0.08760310, 0.69544796],
+         [0.08076227, 0.08173648, 0.65997013],
+         [0.17549017, 0.08614120, 0.65676111],
+         [0.07912509, 0.08359874, 0.66174847],
+         [ 0.17389188, 0.08795844, 0.65849488],
+         [0, 0, 0]
+         ]
+    )
 
+    mst_739066_01_NG = np.asmatrix(
+        [[0.07987873, 0.12114454, 0.68806497],
+        [0.17597210, 0.12185083, 0.68512255],
+         [0.07997913, 0.11740157, 0.65030805],
+         [0.17579403, 0.11818989, 0.64548738],
+         [0.07804393, 0.11961369, 0.65077830],
+         [0.17341946, 0.12057583, 0.64491026],
+         [0, 0, 0]
+         ]
+    )
+    mst_739066_02_NG = np.asmatrix(
+        [[0.08167158, 0.09028894, 0.69517437],
+        [0.17759340, 0.09120966, 0.69090970],
+         [0.08152529, 0.08846443, 0.65793707],
+         [0.17716760, 0.08928283, 0.65241108],
+         [0.07982656, 0.09032799, 0.65921978],
+         [0.17548190, 0.09116799, 0.65374381],
+         [0, 0, 0]
+         ]
+    )
+    mst_739095_01_OK = np.asmatrix(
+        [[-0.08283047, -0.09724362, 0.68876704],
+        [-0.17487075, -0.09416086, 0.70340010],
+         [-0.08267753, -0.09506578, 0.65098081],
+         [-0.17479649, -0.09216708, 0.66213383],
+         [-0.08099957, -0.09703880, 0.65281725],
+         [-0.17300063, -0.09427484, 0.66429502],
+         [0, 0, 0]
+         ]
+    )
+    mst_739095_02_OK = np.asmatrix(
+        [[-0.08212027, -0.08952541, 0.69123739],
+        [-0.17442948, -0.08626552, 0.70464047],
+         [-0.08194251, -0.08768754, 0.65392189],
+         [-0.17418345, -0.08479127, 0.66479405],
+         [-0.08021447, -0.08956021, 0.65473711],
+         [-0.17246269, -0.08668734, 0.66593508],
+         [0, 0, 0]
+         ]
+    )
+
+    mst_739096_01_OK = np.asmatrix(
+        [[-0.08426255, -0.07545503, 0.69987444],
+        [-0.17141911, -0.08221066, 0.70400003],
+         [-0.08400071, -0.07449988, 0.66304987],
+         [-0.17131946, -0.08106609, 0.66452362],
+         [-0.08245707, -0.07633561, 0.66460892],
+         [-0.16976085, -0.08291501, 0.66613901],
+         [0, 0, 0]
+         ]
+    )
+    mst_739096_02_OK = np.asmatrix(
+        [[-0.08446433, -0.07516811, 0.69967741],
+        [-0.17160085, -0.08198157, 0.70340807],
+         [-0.08421073, -0.07420659, 0.66258267],
+         [-0.17150571, -0.08077033, 0.66397673],
+         [-0.08251467, -0.07604997, 0.66360551],
+         [-0.17007068, -0.08263942, 0.66689727],
+         [0, 0, 0]
+         ]
+    )
+
+    print("동일한 세트에서 하나의 켈을 기준으로 R,T값을 추출함")
+    print("mst_739106_03_NG 기준")
+    # rrrrr = m_findTransformedPoints(mst_739106_03_NG[0:5],mst_739106_02_NG[0:5],mst_739106_03_NG)
+    tR, tT = rigid_transform_3D(mst_739106_03_NG, mst_739106_02_NG)
     print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
-
     print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
-    print('rrrrr\n', rrrrr)
+    # print('rrrrr\n', rrrrr)
 
+    tR2, tT2 = rigid_transform_3D(mst_739106_03_NG, mst_739106_01_NG)
+    print('tR33', *tR2, 'tT(mm)', *tT2, sep='\n')
+    print('R31(deg)', cv2.Rodrigues(tR2)[0] * radianToDegree)
+
+    print("mst_739066_02_NG 기준")
+    tR, tT = rigid_transform_3D(mst_739066_02_NG, mst_739066_01_NG)
+    print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
+    print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
+
+    print("mst_739095_02_OK 기준")
+    tR, tT = rigid_transform_3D(mst_739095_02_OK, mst_739095_01_OK)
+    print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
+    print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
+
+    print("mst_739096_02_OK 기준")
+    tR, tT = rigid_transform_3D(mst_739096_02_OK, mst_739096_01_OK)
+    print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
+    print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
 
 
 # print("Sub\n", *(m_ProjectAbsCoor(p660P_Full, p660P)-m_ProjectAbsCoor(p660P_Full-np.asmatrix(np.ones((p660P_Full.shape[0],1))*[170.573,-1.146,	-1.093]), p660P_base503)), sep='\n' )
@@ -1365,3 +1520,4 @@ print("Start 3d accuracy\n")
 tdata = load_DPA_file("0128_eye_display_coordinate.txt") #미완성
 auto_recovery_3d_points_on_each_of_coordinate(tdata)
 # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
+# test()
