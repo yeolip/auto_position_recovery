@@ -3,6 +3,7 @@ import math
 import cv2
 import csv
 import pandas as pd
+from itertools import combinations
 
 #Automatic virtual position recovery using relative coordinates
 
@@ -460,7 +461,7 @@ def m_findTransformedPoints(P_Ref, P_Input, P_Target):
         # 1012.14066152380, - 47.4931985302768, - 481.028802658092
         # 792.075892677580, - 46.8164625429134, - 671.160246228224
         # 293.693512131688, - 51.1847826907368, - 145.560518603204
-    return P_Transformed
+    return P_Transformed, R, T
 
 
 
@@ -898,6 +899,7 @@ def move_origin_from_refer_point():
     print('inverse',(t_matrix_inv[0:3,0:3] * pTest[5:10].T).T + t_matrix_inv[0:3,3])
 
 def load_DPA_file(fname):
+    print("///////load_DPA_file///////")
     tData = []
     # fp = open(fname, 'r', encoding='utf-8')
     # for row in csv.reader(fp, skipinitialspace= True, delimiter=','):
@@ -921,7 +923,19 @@ def load_DPA_file(fname):
 
     return df
 
-def save_DPA_file():
+def save_DPA_file(tdata, fname):
+    print("///////save_DPA_file///////")
+    if(tdata.group_first.all()):
+        tdata = tdata.drop(['group_first'], axis=1)
+    if(tdata.group_sub.all()):
+        tdata = tdata.drop(['group_sub'], axis=1)
+
+    tdata.point_name = '"' + tdata.point_name + '"'
+
+    tdata.to_csv(fname, mode='w', index=False, header=False, sep=',', quotechar=" ")
+
+    print(tdata)
+    print(fname)
     pass
 
 def auto_recovery_3d_points_on_each_of_coordinate_predebug(tData):
@@ -1085,6 +1099,93 @@ def auto_recovery_3d_points_on_each_of_coordinate_predebug(tData):
     # tData.merge()
     # tData.append(a)
     pass
+
+
+
+#첫번째 DataFrame에서 두번째 DataFrame을 비교하여, point_name의 값이 없는 부분을 모두 (0,0,0)으로 생성함
+def compare_between_title(tfirst, tcomp):
+    tdebug = 0
+    print("compare_between_title")
+    tfirst = tfirst.reset_index(drop=True)
+    if(tdebug):
+        print('tfirst',tfirst)
+    # print('tcompare',tcompare)
+    tcompare = tcomp.copy()
+    tcompare['title'] = tfirst.title[0]
+    tcompare['number'] += 1000
+    tcompare['tx'] = 0.0
+    tcompare['ty'] = 0.0
+    tcompare['tz'] = 0.0
+    tcompare = tcompare.reset_index(drop=True)
+    df = tcompare
+
+    for i in tfirst.point_name:
+        for tnum, j in enumerate(tcompare.point_name):
+            if(i == j):
+                df = df.drop(tnum)
+    # print(tcompare)
+    if (tdebug):
+        print('df', df)
+        print('tfirst',tfirst)
+    # ret = tfirst.merge([df])
+    ret = pd.concat([tfirst,df])
+    ret = ret.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
+    ret = ret.reset_index(drop=True)
+    if (tdebug):
+        print('ret', ret)
+    return ret
+
+#숫자 자릿수 리턴
+def digit_length(n):
+    ans = 0
+    while n:
+        n //= 10
+        ans += 1
+    return ans
+
+def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
+    tdebug = 1
+    print("update_position_using_relative_2title", ttype, tfirst, tsecond)
+    tdata2 = tdata.copy()
+
+    tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (tdata2['number'] <= 9999)])
+    tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (tdata2['number'] <= 9999)])
+    tdata_first_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+    tdata_second_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    if (tdebug):
+        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)])
+        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond)])
+        print(tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+        print(tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    update_tdata_based_on_second, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_first_type, tdata_second_type, tdata_first_without_type)
+    update_tdata_based_on_first, tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_second_type, tdata_first_type, tdata_second_without_type)
+    if (tdebug):
+        print('First to Second =>\ntT(mm)', *tT_1_to_2, 'tR33', *tR_1_to_2, 'R31(deg)', cv2.Rodrigues(tR_1_to_2)[0] * radianToDegree, sep='\n')
+        print('Second to First =>\ntT(mm)', *tT_2_to_1,'tR33', *tR_2_to_1,'R31(deg)', cv2.Rodrigues(tR_2_to_1)[0] * radianToDegree, sep='\n')
+
+    tdata_first_without_type =  tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)].reset_index(drop=True)
+    tdata_second_without_type = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].reset_index(drop=True)
+
+    tdata_first_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_second, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+    tdata_first_without_type['title'] = tsecond
+    tdata_first_without_type['number'] = tdata_first_without_type.apply(lambda x: ( x['number'] + 10000* x['group_first']) if x['number']< 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis = 1)
+    if (tdebug):
+        print(tdata_first_without_type)
+    tdata_second_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_first, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+    tdata_second_without_type['title'] = tfirst
+    tdata_second_without_type['number'] = tdata_second_without_type.apply(lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']),  axis=1)
+    if (tdebug):
+        print(tdata_second_without_type)
+
+    tdata = pd.concat([tdata, tdata_first_without_type, tdata_second_without_type])
+    tdata = tdata.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
+    tdata = tdata.reset_index(drop=True)
+    print(tdata)
+    return tdata
+
+
 def auto_recovery_3d_points_on_each_of_coordinate(tData):
     tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
     tData['group_sub'] = tData['point_name'].str.split('_').str[0]
@@ -1109,19 +1210,6 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
         .sort_values(['title'], ascending=False)
     print('\ndf9_group_sub\n',df9_group_sub)
 
-
-    print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
-    # print('total '(df5_list.group_sub))
-    tData_grp= []
-    for tnum in range(0,len(df5_list.group_sub.value_counts().index),1):
-        # print(tnum)
-        ta = int(df5_list.group_sub.value_counts()[tnum])
-        if(ta > 1 ):
-            tb = df5_list.group_sub.value_counts().index[tnum]
-            # print(ta, tb)
-            tData_grp.append([ta, tb])
-    print('tData_grp', tData_grp)
-
     # print("&&" * 50)
     # #   # Title/Labeling 구별
     # list_type_point = []
@@ -1145,33 +1233,116 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
     # print(dict_type_point)
     # print("\\\\" * 50)
     #
-    # # print(tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True))
-    # # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
-    # # print(df7_title.index)
 
 
     tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
     print('tvalidData', tvalidData)
     tmodifiedData = tvalidData
 
+    # 첫번째 좌표묶음기준으로 나머지 좌표들의 point_name이 없는 부분을 모두 생성하여, 더미 (0,0,0)을 생성함
+    tfirst_title = pd.DataFrame()
+    for tnum, (tkey, tdata) in enumerate(tvalidData.groupby(['title'])):
+        # print('key', tnum, tkey,tdata )
+        if(tnum == 0):
+            tfirst_title = tdata
+        else:
+            tfirst_title = compare_between_title(tfirst_title, tdata)
 
-    for tidx in df9_group_sub.index:
-        print(tidx)
-        for tkey, tdata in tvalidData.groupby(['title']):
-            print(tkey,tdata)
-            for tkey2, tdata2 in tvalidData.groupby(['title', 'group_sub']):
-                print(tkey2, tdata2)
-        # for test in df5_list:
-        #     if(tidx == tkey):
-        #         print(tkey, tdata)
-        # print(tidx, tdata[0], tdata[1])
-        # for (tcol_title,tcol_group_sub), tdata in tvalidData.groupby(['title', 'group_sub']):
-        #     print(tcol_title, tcol_group_sub)
-        #     if(tcol_group_sub == tlabel):
-        #     if(tkey[1] == )
-        #         print(tlabel, '\n', np.array(tdata[['tx', 'ty', 'tz']].reset_index(drop=True)))
+    # print('tfirst_title', tfirst_title)
+
+    # 첫번째 모두 생성하여, 더미 (0,0,0)을 기준으로 나머지 좌표묶음들의 더미(0,0,0) 생성함
+    tdata_first = tfirst_title.copy()
+    tsecond_title_all = pd.DataFrame()
+    tsecond_title = pd.DataFrame()
+    for tnum, (tkey, tdata) in enumerate(tvalidData.groupby(['title'])):
+        # print('key', tnum, tkey,tdata )
+        if(tnum == 0):
+            continue
+        else:
+            tsecond_title = tdata
+            tsecond_title_all = pd.concat([tsecond_title_all, compare_between_title(tsecond_title, tdata_first)])
+
+    ttitle_all = pd.concat([tfirst_title, tsecond_title_all]).reset_index(drop=True)
+    # print('tfirst_title', tfirst_title)
+    print('ttitle_all', ttitle_all)
+
+    df8_list_all = ttitle_all[['group_sub', 'title']].drop_duplicates().reset_index(drop=True)
+    print('\ndf8_list_all\n',df8_list_all)
+
+    print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
+    tData_grp= []
+    for tnum in range(0,len(df5_list.group_sub.value_counts().index),1):
+        # print(tnum)
+        ta = int(df5_list.group_sub.value_counts()[tnum])
+        if(ta > 1 ):
+            tb = df5_list.group_sub.value_counts().index[tnum]
+            # print(ta, tb)
+            tData_grp.append([ta, tb])
+    print('tData_grp', tData_grp)
+
+    df5_list = df5_list.sort_values(['group_sub', 'title'], ascending=(True, True)).reset_index(drop=True)
+    df5_list_dup = df5_list.copy()
+    # print('df5_list',df5_list)
+    for i, row in df5_list.iterrows():
+        # print(i, row['group_sub'], row['title'])
+        bchk = 1
+        for jcount, jtype in tData_grp:
+            if(jtype == row['group_sub']):
+                bchk = 0
+                break
+        if(bchk == 1):
+            df5_list_dup = df5_list_dup.drop(i)
+
+    df5_list_dup = df5_list_dup.reset_index(drop=True)
+    print('\ndf5_list_dup', df5_list_dup)
+
+    for i, (jcount, jtype) in enumerate(tData_grp):
+        print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        tData_grp[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        # tData_grp[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+
+    print('\ntData_grp', tData_grp)
+
+    update_list = df8_list_all.copy()
+    for i, tdat in df8_list_all.iterrows():
+        for j, tdat2 in df5_list_dup.iterrows():
+            if(tdat['group_sub'] == tdat2['group_sub'] and tdat['title'] == tdat2['title']):
+                update_list = update_list.drop(i, axis = 0)
+
+    print('\nupdate_list',update_list)
+
+    #같은 point_name의 title을 2가지씩 추출할 조합
+    for i, (jcount, jtype, jcomp) in enumerate(tData_grp):
+        print(i, jcomp)
+        # print(list(combinations(jcomp, 2)))
+        tloop = list(combinations(jcomp, 2))
+        for title_one, title_two in tloop:
+            print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
+            tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+
+    print('final tvalidData',tvalidData)
+    print("\nRRRRRRRRRRRRRR")
+    # tvalidData = update_position_using_relative_2title('DISP', '403589_DISP', '770_MANE_ABS2_403589', tvalidData)
+
+    # return ttitle_all
+    # for tidx in df9_group_sub.index:
+    #     print(tidx)
+    #     # if(tidx == )
+    #     for tkey, tdata in tvalidData.groupby(['title']):
+    #         print(tkey,tdata)
+    #         for tkey2, tdata2 in tvalidData.groupby(['title', 'group_sub']):
+    #             print(tkey2, tdata2)
+    #     # for test in df5_list:
+    #     #     if(tidx == tkey):
+    #     #         print(tkey, tdata)
+    #     # print(tidx, tdata[0], tdata[1])
+    #     # for (tcol_title,tcol_group_sub), tdata in tvalidData.groupby(['title', 'group_sub']):
+    #     #     print(tcol_title, tcol_group_sub)
+    #     #     if(tcol_group_sub == tlabel):
+    #     #     if(tkey[1] == )
+    #     #         print(tlabel, '\n', np.array(tdata[['tx', 'ty', 'tz']].reset_index(drop=True)))
     print("TTTTTTTTTTTTTT")
-
+    return ttitle_all
 
     for tidx, (tcount, tlabel) in enumerate(tData_grp):
         print(tidx, tcount, tlabel)
@@ -1517,7 +1688,9 @@ print("Start 3d accuracy\n")
 # relative_position_based_on_refer_point()
 # relative_position_based_on_many_points()
 # move_origin_from_refer_point()
-tdata = load_DPA_file("0128_eye_display_coordinate.txt") #미완성
-auto_recovery_3d_points_on_each_of_coordinate(tdata)
+tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
+
+tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
+# save_DPA_file(tresult, "result.txt")
 # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
 # test()
