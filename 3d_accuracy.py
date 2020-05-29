@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import cv2
+import sys
 import csv
 import pandas as pd
 from itertools import combinations
@@ -12,7 +13,7 @@ pd.set_option('display.max_rows', 1000)
 # 최대 열 수 설정
 pd.set_option('display.max_columns', 50)
 # 표시할 가로의 길이
-pd.set_option('display.width', 120)
+pd.set_option('display.width', 140)
 
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
@@ -426,6 +427,7 @@ def m_findTransformedPoints(P_Ref, P_Input, P_Target):
     # [450.7460, - 53.8990,    128.5110],
     # [638.8010, - 60.2540,    827.9780]])
 
+    # print('P_Input.shape[0],P_Ref.shape[0]', P_Input.shape[0],P_Ref.shape[0] )
     n_loop = P_Input.shape[0] / P_Ref.shape[0]
     # print(n_loop, P_Input.shape[0],P_Ref.shape[0] )
     # n_Ref = P_Ref.shape[0]
@@ -932,6 +934,11 @@ def save_DPA_file(tdata, fname):
 
     tdata.point_name = '"' + tdata.point_name + '"'
 
+    tdata.to_csv(fname+"ext", mode='w', index=False, header=False, sep=',', quotechar=" ")
+
+    if(tdata.seq.all()):
+        tdata = tdata.drop(['seq'], axis=1)
+
     tdata.to_csv(fname, mode='w', index=False, header=False, sep=',', quotechar=" ")
 
     print(tdata)
@@ -1135,6 +1142,43 @@ def compare_between_title(tfirst, tcomp):
         print('ret', ret)
     return ret
 
+#중복데이터 제거 (argument1, argument2) / return argument2.drop.duplicate
+def check_duplicate(tdata_one, tdata_two):
+    tdebug = 1
+    # ttext = 'DEL'
+    print("check_duplicate")
+    tdata_copy = tdata_two.copy()
+    for i, tone in tdata_one.iterrows():
+        # if (tdebug):
+        #   print('i tx,ty,tz', i, tone['tx'], tone['ty'], tone['tz'])
+        for j, ttwo in tdata_two.iterrows():
+            if((tone['title'] != ttwo['title']) or(tone['group_sub'] != ttwo['group_sub'])):
+                continue
+            # if (tdebug):
+            #     print('j tx,ty,tz', j, ttwo['tx'], ttwo['ty'], ttwo['tz'])
+            if(tone['tx'] == ttwo['tx'] and tone['ty'] == ttwo['ty'] and tone['tz'] == ttwo['tz']):
+                tdata_copy = tdata_copy.drop(j, axis=0)
+                # tdata_copy['point_name'][j] = 'DEL'
+            elif( abs(tone['tx'] - ttwo['tx']) <= 1 and abs(tone['ty'] - ttwo['ty']) <= 1 and abs(tone['tz'] - ttwo['tz']) <= 1 ):
+                tdata_copy = tdata_copy.drop(j, axis=0)
+                # tdata_copy['point_name'][j] = 'DEL'
+            #중복이되는 title과 point_name이면, point_name뒤에 group_first number를 넣자
+            # elif((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+            #     tdata_copy['point_name'][j] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+    for i, tone in tdata_one.iterrows():
+        for k, ttwo in tdata_copy.iterrows():
+            if ((tone['title'] != ttwo['title']) or (tone['group_sub'] != ttwo['group_sub'])):
+                continue
+            if((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+                tdata_copy['point_name'][k] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+                # tdata_copy['point_name'][k] = "DEL"
+
+    # tdata_copy = tdata_copy[~tdata_copy['point_name'].str.contains('DEL')].reset_index(drop=True)
+    if (tdebug):
+        print('tdata_two',tdata_two)
+        print('tdata_copy',tdata_copy)
+    return tdata_copy
+
 #숫자 자릿수 리턴
 def digit_length(n):
     ans = 0
@@ -1148,14 +1192,18 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
     print("update_position_using_relative_2title", ttype, tfirst, tsecond)
     tdata2 = tdata.copy()
 
-    tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (tdata2['number'] <= 9999)])
-    tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (tdata2['number'] <= 9999)])
+    # tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (tdata2['number'] <= 9999)])
+    tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ])
+    # tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (tdata2['number'] <= 9999)])
+    tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|")) ])
     tdata_first_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
     tdata_second_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
 
     if (tdebug):
-        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)])
-        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond)])
+        # print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)])
+        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|"))])
+        # print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond)])
+        print(tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|"))])
         print(tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
         print(tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
 
@@ -1179,16 +1227,27 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
     if (tdebug):
         print(tdata_second_without_type)
 
+    #중복데이터 제거
+    tdata_first_without_type = check_duplicate(tdata, tdata_first_without_type)
+    tdata_second_without_type = check_duplicate(tdata, tdata_second_without_type)
+
+    #sequence path
+    tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype
+    tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">"+ ttype
+
     tdata = pd.concat([tdata, tdata_first_without_type, tdata_second_without_type])
     tdata = tdata.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
+    tdata['group_first'] = tdata.groupby('title').grouper.group_info[0] + 1
     tdata = tdata.reset_index(drop=True)
-    print(tdata)
+    if (tdebug):
+        print(tdata)
     return tdata
 
 
 def auto_recovery_3d_points_on_each_of_coordinate(tData):
     tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
     tData['group_sub'] = tData['point_name'].str.split('_').str[0]
+    tData['seq'] = ""
     # print(tData)
     print(tData.head())
     print(tData.tail())
@@ -1312,15 +1371,28 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
     print('\nupdate_list',update_list)
 
     #같은 point_name의 title을 2가지씩 추출할 조합
+    combination_of_title = list(combinations(list(df7_title.index), 2))
+    print('combination', )
     for i, (jcount, jtype, jcomp) in enumerate(tData_grp):
+        # if(jtype == "MANE"):
+        #     continue
         print(i, jcomp)
         # print(list(combinations(jcomp, 2)))
         tloop = list(combinations(jcomp, 2))
         for title_one, title_two in tloop:
             print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
+            for j, (j_title_one, j_title_two) in enumerate(combination_of_title):
+                if((j_title_one == title_one and j_title_two == title_two) or (j_title_one == title_two and j_title_two == title_one)):
+                    del combination_of_title[j]
+                    print('j', j_title_one, j_title_two)
+                    break
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
-
+    print('combination_of_title',combination_of_title)
+    for title_one, title_two in combination_of_title:
+        print('\t', jtype, '->', title_one, 'vs', title_two)
+        tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('final tvalidData',tvalidData)
+
     print("\nRRRRRRRRRRRRRR")
     # tvalidData = update_position_using_relative_2title('DISP', '403589_DISP', '770_MANE_ABS2_403589', tvalidData)
 
@@ -1685,12 +1757,14 @@ def test():
 #
 # m_findTransformedPoints(P_DPA_Pts,m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1),np.zeros((5,3)))
 print("Start 3d accuracy\n")
+if (0):
+    sys.stdout = open('DebugLog.txt', 'w')
 # relative_position_based_on_refer_point()
 # relative_position_based_on_many_points()
 # move_origin_from_refer_point()
 tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
 
 tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
-# save_DPA_file(tresult, "result.txt")
+save_DPA_file(tresult, "result.txt")
 # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
 # test()
