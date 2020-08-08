@@ -5,6 +5,15 @@ import sys
 import csv
 import pandas as pd
 from itertools import combinations
+import time
+
+import tkinter as tk
+import tkinter.ttk
+# from tkinter import *
+from tkinter import filedialog
+from tkinter import messagebox
+
+
 
 #Automatic virtual position recovery using relative coordinates
 
@@ -64,6 +73,12 @@ def eulerAnglesToRotationMatrix(theta):
     R = np.dot(R_z, np.dot(R_y, R_x))
 
     return R
+
+def funcname():
+    return sys._getframe(1).f_code.co_name + "()"
+
+def callername():
+    return sys._getframe(2).f_code.co_name + "()"
 
 # a= np.array((0.00	,0.00	,0.00))
 # b= np.array((3.00	,0.00	,0.00))
@@ -902,7 +917,7 @@ def move_origin_from_refer_point():
 
 def load_DPA_file(fname):
     print("///////load_DPA_file///////")
-    tData = []
+    # tData = []
     # fp = open(fname, 'r', encoding='utf-8')
     # for row in csv.reader(fp, skipinitialspace= True, delimiter=','):
     #     print(row)
@@ -921,7 +936,7 @@ def load_DPA_file(fname):
     # print(df.head())
     df.columns = ['title', 'number', 'point_name', 'tx', 'ty', 'tz']
     df = df.sort_values(['title','point_name','number'], ascending=(True,True,True))
-    print(tData)
+    # print(tData)
 
     return df
 
@@ -1188,6 +1203,7 @@ def digit_length(n):
     return ans
 
 def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 1
     print("update_position_using_relative_2title", ttype, tfirst, tsecond)
     tdata2 = tdata.copy()
@@ -1245,6 +1261,9 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
 
 
 def auto_recovery_3d_points_on_each_of_coordinate(tData):
+    print("//////////",funcname(),"//////////")
+    # print("//////////{:s}//////////".format(funcname()))
+
     tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
     tData['group_sub'] = tData['point_name'].str.split('_').str[0]
     tData['seq'] = ""
@@ -1501,6 +1520,7 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
     return
 
 def check_face_pos_GT_based_on_MRA2_CAD_displaycenter(): #미완성
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     # GT -> display center -> Camera position -> CAD display center -> modified GT
     nGT = np.asmatrix(
     [[548.0606, -0.9230 ,195],
@@ -1747,6 +1767,188 @@ def test():
     print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
 
 
+def preprocess(tData):
+    print("//////////",funcname(),"//////////")
+    # print("//////////{:s}//////////".format(funcname()))
+
+    tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
+    tData['group_sub'] = tData['point_name'].str.split('_').str[0]
+    tData['seq'] = ""
+    # print(tData)
+    print(tData.head())
+    print(tData.tail())
+
+    print("**" * 50)
+        # Labeling이 동일한 Title 추출 (기준점을 찾기위함)
+    # [title, group_sub] 데이터중에 중복된 데이터 삭제
+    df3 = tData[['group_sub', 'title']].drop_duplicates()
+    df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
+    print('\ndf5_list\n',df5_list)
+
+    return df5_list
+
+count = 0
+
+def display_view():
+    window = tkinter.Tk()
+    window.title("3D Accuracy")
+    window.geometry("640x400+100+100")
+    window.resizable(True, True)
+
+    values = [str(i) + "번" for i in range(1, 101)]
+
+    combobox = tkinter.ttk.Combobox(window, height=15, values=values)
+    combobox.pack()
+
+    combobox.set("목록 선택")
+
+    label = tkinter.Label(window, text="안녕하세요.")
+    label.pack()
+
+    label = tkinter.Label(window, text="파이썬", width=10, height=5, fg="red", relief="solid")
+    label.pack()
+
+    def countUP():
+        global count
+        count += 1
+        label.config(text=str(count))
+
+    button = tkinter.Button(window, overrelief="solid", width=15, command=countUP, repeatdelay=1000, repeatinterval=100)
+    button.pack()
+
+    listbox = tkinter.Listbox(window, selectmode='extended', height=0)
+    listbox.insert(0, "1번")
+    listbox.insert(1, "2번")
+    listbox.insert(2, "2번")
+    listbox.insert(3, "2번")
+    listbox.insert(4, "3번")
+    listbox.delete(1, 2)
+    listbox.pack()
+
+    def flash():
+        checkbutton1.flash()
+
+    CheckVariety_1 = tkinter.IntVar()
+    CheckVariety_2 = tkinter.IntVar()
+
+    checkbutton1 = tkinter.Checkbutton(window, text="O", variable=CheckVariety_1, activebackground="blue")
+    checkbutton2 = tkinter.Checkbutton(window, text="△", variable=CheckVariety_2)
+    checkbutton3 = tkinter.Checkbutton(window, text="X", variable=CheckVariety_2, command=flash)
+
+    checkbutton1.pack()
+    checkbutton2.pack()
+    checkbutton3.pack()
+################
+    notebook = tkinter.ttk.Notebook(window, width=300, height=300)
+    notebook.pack()
+
+    frame1 = tkinter.Frame(window)
+    notebook.add(frame1, text="페이지1")
+
+    label1 = tkinter.Label(frame1, text="페이지1의 내용")
+    label1.pack()
+
+    frame2 = tkinter.Frame(window)
+    notebook.add(frame2, text="페이지2")
+
+    label2 = tkinter.Label(frame2, text="페이지2의 내용")
+    label2.pack()
+
+    frame3 = tkinter.Frame(window)
+    notebook.add(frame3, text="페이지4")
+
+    label3 = tkinter.Label(frame3, text="페이지4의 내용")
+    label3.pack()
+
+    frame4 = tkinter.Frame(window)
+    notebook.insert(2, frame4, text="페이지3")
+
+    label4 = tkinter.Label(frame4, text="페이지3의 내용")
+    label4.pack()
+    ################
+    menubar = tkinter.Menu(window)
+
+    menu_1 = tkinter.Menu(menubar, tearoff=0)
+    menu_1.add_command(label="하위 메뉴 1-1")
+    menu_1.add_command(label="하위 메뉴 1-2")
+    menu_1.add_separator()
+    menu_1.add_command(label="하위 메뉴 1-3")
+    menubar.add_cascade(label="상위 메뉴 1", menu=menu_1)
+
+    toplevel = tkinter.Toplevel(window, menu=menubar)
+    toplevel.geometry("320x200+820+100")
+
+    def flash():
+        checkbutton1.flash()
+
+    CheckVariety_1 = tkinter.IntVar()
+    CheckVariety_2 = tkinter.IntVar()
+
+    checkbutton1 = tkinter.Checkbutton(frame2, text="O", variable=CheckVariety_1, activebackground="blue")
+    checkbutton2 = tkinter.Checkbutton(frame2, text="△", variable=CheckVariety_2)
+    checkbutton3 = tkinter.Checkbutton(frame2, text="X", variable=CheckVariety_2, command=flash)
+
+    print(CheckVariety_1, CheckVariety_2)
+
+    checkbutton1.pack()
+    checkbutton2.pack()
+    checkbutton3.pack()
+    window.mainloop()
+
+def domenu():
+    print("OK")
+
+def display_mainview():
+    twindow = tkinter.Tk()
+    twindow.title("3D Accuracy")
+    twindow.geometry("640x400+100+100")
+    twindow.resizable(True, True)
+
+
+
+    label = tkinter.Label(twindow, text="1. 3D position 데이터를 읽으세요\n2.서치후 중복되는 라벨을 출력합니다. 기준으로 설정하고 싶은 라벨을 체크하세요.")
+    label.pack()
+
+    # label = tkinter.Label(twindow, text="파이썬", width=10, height=5, fg="red", relief="solid")
+    # label.pack()
+
+    def countUP():
+        global count
+        count += 1
+        label.config(text=str(count))
+
+    button = tkinter.Button(twindow, overrelief="solid", width=15, command=countUP, repeatdelay=1000, repeatinterval=100)
+    button.pack()
+
+
+    ################
+    menubar = tkinter.Menu(twindow)
+
+    filemenu = tkinter.Menu(menubar, tearoff=0)
+    # filemenu.add_command(label="하위 메뉴 1-1")
+    # filemenu.add_command(label="하위 메뉴 1-2")
+    # filemenu.add_separator()
+    # filemenu.add_command(label="하위 메뉴 1-3")
+    # menubar.add_cascade(label="상위 메뉴 1", menu=filemenu)
+
+    menubar.add_cascade(label='File', menu=filemenu)
+    filemenu.add_command(label="New", command=display_mainview)
+    filemenu.add_command(label="Load", command=menu_load)
+    filemenu.add_command(label="Save", command=menu_save)
+    filemenu.add_separator()
+    filemenu.add_command(label="Exit", command=twindow.quit)
+
+    helpmenu = tkinter.Menu(menubar, tearoff=0)
+    menubar.add_cascade(label="Help", menu=helpmenu)
+    helpmenu.add_command(label="About", command=domenu)
+
+    # toplevel = tkinter.Toplevel(window, menu=menubar)
+    # toplevel.geometry("320x200+820+100")
+
+
+    twindow.config(menu=menubar)
+    twindow.mainloop()
+
 # print("Sub\n", *(m_ProjectAbsCoor(p660P_Full, p660P)-m_ProjectAbsCoor(p660P_Full-np.asmatrix(np.ones((p660P_Full.shape[0],1))*[170.573,-1.146,	-1.093]), p660P_base503)), sep='\n' )
 # print("Sub\n", *(m_ProjectAbsCoor(p660P_Full, p660P)-m_ProjectAbsCoor(p550N_Full, p550N)), sep='\n' )
 # m_ProjectAbsCoor(p660P_Full, p660P_base501)
@@ -1756,15 +1958,194 @@ def test():
 #
 #
 # m_findTransformedPoints(P_DPA_Pts,m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1),np.zeros((5,3)))
+
+
+class mainMenu_GUI():
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("3D Auto recovery position")
+        self.root.geometry("640x400+100+100")
+        self.root.resizable(True, True)
+
+        self.label = tk.Label(self.root, text="1. 3D position 데이터를 읽으세요\n2.서치후 중복되는 라벨을 출력합니다. 기준으로 설정하고 싶은 라벨을 체크하세요.")
+        self.label.pack()
+
+        self.menubar = tk.Menu(self.root)
+
+        filemenu = tk.Menu(self.menubar, tearoff=0)
+
+        self.menubar.add_cascade(label='File', menu=filemenu)
+        filemenu.add_command(label="New", command=self.menu_new)
+        filemenu.add_command(label="Load", command=self.menu_load)
+        filemenu.add_command(label="Save", command=self.menu_save)
+        filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=self.root.quit)
+
+        helpmenu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="Help", menu=helpmenu)
+        helpmenu.add_command(label="About", command=domenu)
+
+        self.notebook = tkinter.ttk.Notebook(self.root, width=600, height=400)
+        self.notebook.pack()
+
+        self.mframe = [0, 0, 0, 0]
+        self.menu_new()
+
+    def menu_new(self):
+        if(self.mframe[0] != 0 and self.mframe[1] != 0 and self.mframe[2] != 0 and self.mframe[3] != 0):
+            self.mframe[0].destroy()
+            self.mframe[1].destroy()
+            self.mframe[2].destroy()
+            self.mframe[3].destroy()
+
+        frame1 = tkinter.Frame(self.root)
+        self.notebook.add(frame1, text="Method_One")
+        # label1 = tkinter.Label(frame1, text="페이지1의 내용")
+        # label1.pack()
+        frame1.pack_forget()
+
+        frame2 = tkinter.Frame(self.root)
+        self.notebook.add(frame2, text="Method_Two")
+        # label2 = tkinter.Label(frame2, text="페이지2의 내용")
+        # label2.pack()
+        frame3 = tkinter.Frame(self.root)
+        self.notebook.add(frame3, text="Method_Three")
+        # label3 = tkinter.Label(frame3, text="페이지4의 내용")
+        # label3.pack()
+        frame4 = tkinter.Frame(self.root)
+        self.notebook.add(frame4, text="Method_Four")
+        # label4 = tkinter.Label(frame4, text="페이지3의 내용")
+        # label4.pack()
+        self.mframe = [frame1, frame2, frame3, frame4]
+        self.mframeIdx = 0
+        self.root.config(menu=self.menubar)
+
+        self.button_dict = {}
+        self.filename = ""
+
+    def selectTab(self,event):
+        # if event.widget.index("current") == 0:
+        #     print("One!")
+        # else:
+        #     print("Other!")
+        # print(event.widget.index("current"))
+        self.mframeIdx = event.widget.index("current")
+        self.menu_load(autoLoad=1)
+
+    def on_button_3(self,event):
+        if event.widget.identify(event.x, event.y) == 'label':
+            index = event.widget.index('@%d,%d' % (event.x, event.y))
+            print(event.widget.tab(index, 'text'))
+
+
+    def dynamic_checkBox(self, button_dict, idx):
+        self.button_dict = button_dict
+        row = len(self.button_dict) + 1
+
+        for i, key in enumerate(self.button_dict, 1):
+            self.button_dict[key] = tk.IntVar()  # set all values of the dict to intvars
+            # set the variable of the checkbutton to the value of our dictionary so that our dictionary is updated each time a button is checked or unchecked
+            c = tk.Checkbutton(self.mframe[idx], text=key, variable=self.button_dict[key])
+            c.grid(row=i, sticky=tk.W)
+
+        include = tk.Button(self.mframe[idx], text='Include',
+                            command=self.query_include)
+        include.grid(row=row, sticky=tk.W)
+
+        exclude = tk.Button(self.mframe[idx], text='Exclude',
+                            command=self.query_exclude)
+        exclude.grid(row=row, sticky=tk.E, padx=50)
+
+        quit = tk.Button(self.mframe[idx], text='Quit', command=self.root.quit)
+        quit.grid(row=row + 1, sticky=tk.W)
+
+    def query_include(self):
+        for key, value in self.button_dict.items():
+            if value.get():
+                print(key)
+
+    def query_exclude(self):
+        for key, value in self.button_dict.items():
+            if not value.get():
+                print(key)
+
+    def menu_load(self, autoLoad=0):
+        if(autoLoad == 0):
+            self.filename = filedialog.askopenfilename(initialdir='./', title='Select file',
+                                                  filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+        if self.filename:
+            try:
+                print("Load %s" % self.filename)
+            except:  # <- naked except is a bad idea
+                messagebox.showerror("Load Data File", "Failed to read file\n'%s'" % self.filename)
+            tdata = load_DPA_file(self.filename)
+            ret_type_one = preprocess(tdata)
+            print(ret_type_one)
+            button_dict = {'.txtt': 0, '.pyy': 1, '.cc': 0, '.jpegg': 0}
+            print(ret_type_one.group_sub)
+            print(ret_type_one.title)
+            old_tdic = dict(ret_type_one.group_sub)
+            old_tset = list(ret_type_one.group_sub)
+
+            old_tdic_mix = dict(ret_type_one.group_sub+'\t\t|'+ret_type_one.title)
+            print(list(old_tdic.values()))
+            swap_tdic = {value:key for key, value in old_tdic.items()}
+            swap_tdic_mix = dict([(value, key) for key, value in old_tdic_mix.items()])
+            # swap_tdic = {value:key for key, value in old_tdic.items()}
+
+            # print(swap_tdic)
+            #키는 중복될수 있어, Value로 데이터를 보내려함
+            if(self.mframeIdx == 0):
+                self.dynamic_checkBox(swap_tdic, self.mframeIdx)
+            elif(self.mframeIdx == 1):
+                self.dynamic_checkBox(swap_tdic_mix, self.mframeIdx)
+            # button_dict2 = {'.txttt': 0, '.pyyy': 1, '.ccc': 0, '.jpeggg': 0}
+            # print("test")
+            # self.root.after(5000, self.menu_load())
+            return
+        # print(filename)
+
+    def menu_save(self):
+        filename = filedialog.asksaveasfilename(initialdir='./', title='Select file',
+                                                filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+        if filename:
+            try:
+                print("Save %s" % filename)
+            except:  # <- naked except is a bad idea
+                messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % filename)
+            return
+        print(filename)
+
+    def main(self):
+        # self.notebook.bind('<3>', self.on_button_3)
+        self.notebook.bind('<<NotebookTabChanged>>', self.selectTab)
+        self.root.mainloop()
+
+    # def main2(self):
+    #     while 1:
+    #         self.root.update_idletasks()
+    #         self.root.update()
+    #         time.sleep(0.01)
+    #     # self.root.after(1000,self.main2)
+
 print("Start 3d accuracy\n")
 if (0):
     sys.stdout = open('DebugLog.txt', 'w')
+button_dict = {'.txt':0, '.py':1, '.c':0, '.jpeg':0}
+gui = mainMenu_GUI()
+# gui.dynamic_checkBox(button_dict)
+gui.main()
+# display_mainview()
+print(1/0)
 # relative_position_based_on_refer_point()
 # relative_position_based_on_many_points()
 # move_origin_from_refer_point()
 tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
 
-tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
-save_DPA_file(tresult, "result.txt")
+ret_type_one = preprocess(tdata)
+print(ret_type_one)
+# tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
+# save_DPA_file(tresult, "result.txt")
+
 # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
 # test()
