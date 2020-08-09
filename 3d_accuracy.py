@@ -1412,6 +1412,7 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
         tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('final tvalidData',tvalidData)
 
+    return tvalidData
     print("\nRRRRRRRRRRRRRR")
     # tvalidData = update_position_using_relative_2title('DISP', '403589_DISP', '770_MANE_ABS2_403589', tvalidData)
 
@@ -1775,17 +1776,67 @@ def preprocess(tData):
     tData['group_sub'] = tData['point_name'].str.split('_').str[0]
     tData['seq'] = ""
     # print(tData)
-    print(tData.head())
-    print(tData.tail())
+    # print(tData.head())
+    # print(tData.tail())
 
     print("**" * 50)
         # Labeling이 동일한 Title 추출 (기준점을 찾기위함)
     # [title, group_sub] 데이터중에 중복된 데이터 삭제
     df3 = tData[['group_sub', 'title']].drop_duplicates()
     df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
-    print('\ndf5_list\n',df5_list)
+    # print('\ndf5_list\n',df5_list)
+    #중복제거를 통한 데이터 출력 기준
 
-    return df5_list
+    # [title] 기준으로 (중복 제거) group_sub의 분류된 label 갯수
+    # df7_title = df5_list.groupby('title').count() \
+    #     .sort_values(['group_sub'], ascending=False)
+    # print('\ndf7_title\n',df7_title)
+    #Title을 기준으로 Sort 뒤에 데이터 영역을 나눌때 필요
+
+    # [group_sub] 기준으로 (중복 제거) title의 분류된 label 갯수
+    df9_group_sub = df5_list.groupby('group_sub').count() \
+        .sort_values(['title'], ascending=False)
+    # print('\ndf9_group_sub\n',df9_group_sub)
+    # print('\ndf9_group_sub\n',df9_group_sub[df9_group_sub.values>1])
+    # df9_group_sub_2_more = df9_group_sub[df9_group_sub.values>1]
+
+    print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
+    tData_grp = np.concatenate(
+        (np.column_stack(df9_group_sub.index.values).T, np.column_stack(df9_group_sub.title).T), axis=1).tolist()
+    tData_grp2 = np.concatenate(
+        (np.column_stack(df9_group_sub_2_more.title).T, np.column_stack(df9_group_sub_2_more.index.values).T),
+        axis=1).tolist()
+
+    # print("tData_grp", tData_grp)
+
+
+    df5_list2 = df5_list.sort_values(['group_sub', 'title']).reset_index(drop=True)
+    df5_list_dup = df5_list2.copy()
+    # print('df5_list',df5_list)
+    for i, row in df5_list2.iterrows():
+        # print(i, row['group_sub'], row['title'])
+        bchk = 1
+        for jcount, jtype in tData_grp2:
+            if(jtype == row['group_sub']):
+                bchk = 0
+                break
+        if(bchk == 1):
+            df5_list_dup = df5_list_dup.drop(i)
+
+    df5_list_dup = df5_list_dup.reset_index(drop=True)
+    # print('\ndf5_list_dup', df5_list_dup)
+
+    for i, (jcount, jtype) in enumerate(tData_grp2):
+        print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        tData_grp2[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        # tData_grp[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+
+    print('\ntData_grp2', tData_grp2)
+
+    tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
+    # print('tvalidData', tvalidData)
+
+    return df5_list, tData_grp, tData_grp2, tvalidData
 
 count = 0
 
@@ -1958,13 +2009,17 @@ def display_mainview():
 #
 #
 # m_findTransformedPoints(P_DPA_Pts,m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1),np.zeros((5,3)))
-
+C_MENU_WIDTH = 640
+C_MENU_HEIGHT = 480
+C_MENU_POS_X = 100
+C_MENU_POS_Y = 100
 
 class mainMenu_GUI():
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("3D Auto recovery position")
-        self.root.geometry("640x400+100+100")
+        # self.root.geometry("640x400+100+100")
+        self.root.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH,C_MENU_HEIGHT,C_MENU_POS_X,C_MENU_POS_Y  ))
         self.root.resizable(True, True)
 
         self.label = tk.Label(self.root, text="1. 3D position 데이터를 읽으세요\n2.서치후 중복되는 라벨을 출력합니다. 기준으로 설정하고 싶은 라벨을 체크하세요.")
@@ -1985,11 +2040,15 @@ class mainMenu_GUI():
         self.menubar.add_cascade(label="Help", menu=helpmenu)
         helpmenu.add_command(label="About", command=domenu)
 
-        self.notebook = tkinter.ttk.Notebook(self.root, width=600, height=400)
+        self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-80, height=C_MENU_HEIGHT-80)
+        # self.notebook.pack(fill=tk.BOTH, expand=True)
         self.notebook.pack()
 
-        self.mframe = [0, 0, 0, 0]
+        self.initial_data()
         self.menu_new()
+    def initial_data(self):
+        self.mframe = [0, 0, 0, 0, 0]
+        self.mframeIdx = 0
 
     def menu_new(self):
         if(self.mframe[0] != 0 and self.mframe[1] != 0 and self.mframe[2] != 0 and self.mframe[3] != 0):
@@ -1997,67 +2056,97 @@ class mainMenu_GUI():
             self.mframe[1].destroy()
             self.mframe[2].destroy()
             self.mframe[3].destroy()
+            self.mframe[4].destroy()
+            self.mframe[5].destroy()
+            self.mframe[6].destroy()
+            self.mframe[7].destroy()
 
-        frame1 = tkinter.Frame(self.root)
+        frame1 = tk.Frame(self.root)
         self.notebook.add(frame1, text="Method_One")
-        # label1 = tkinter.Label(frame1, text="페이지1의 내용")
-        # label1.pack()
-        frame1.pack_forget()
+        self.canvas = tk.Canvas(frame1, width=360, height=800, bg="white")
+        scroll = tk.Scrollbar(frame1, command=self.canvas.yview)
+        self.canvas.config(yscrollcommand=scroll.set, scrollregion=self.canvas.bbox("all"))
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        frameOne = tk.Frame(self.canvas, width=320, height=700, bg="white")
+        self.canvas.create_window(C_MENU_POS_X+200, 30, window=frameOne, anchor="n")
+        self.canvas.bind_all('<MouseWheel>', self.event_onMouseWheel)
 
-        frame2 = tkinter.Frame(self.root)
+        frame2 = tk.Frame(self.root)
         self.notebook.add(frame2, text="Method_Two")
-        # label2 = tkinter.Label(frame2, text="페이지2의 내용")
-        # label2.pack()
-        frame3 = tkinter.Frame(self.root)
+        self.canvas2 = tk.Canvas(frame2, width=360, height=800, bg="white")
+        scroll2 = tk.Scrollbar(frame2, command=self.canvas2.yview)
+        self.canvas2.config(yscrollcommand=scroll2.set, scrollregion=self.canvas2.bbox("all"))
+        self.canvas2.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        scroll2.pack(side=tk.RIGHT, fill=tk.Y)
+        frameTwo = tk.Frame(self.canvas2, width=320, height=700, bg="white")
+        self.canvas2.create_window(C_MENU_POS_X + 180, 30, window=frameTwo, anchor="n")
+        self.canvas2.bind_all('<MouseWheel>', self.event_onMouseWheel)
+
+        frame3 = tk.Frame(self.root)
         self.notebook.add(frame3, text="Method_Three")
-        # label3 = tkinter.Label(frame3, text="페이지4의 내용")
-        # label3.pack()
-        frame4 = tkinter.Frame(self.root)
+        self.canvas3 = tk.Canvas(frame3, width=360, height=800, bg="white")
+        scroll3 = tk.Scrollbar(frame3, command=self.canvas3.yview)
+        self.canvas3.config(yscrollcommand=scroll3.set, scrollregion=self.canvas3.bbox("all"))
+        self.canvas3.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        scroll3.pack(side=tk.RIGHT, fill=tk.Y)
+        frameThree = tk.Frame(self.canvas3, width=320, height=700, bg="white")
+        self.canvas3.create_window(C_MENU_POS_X + 150, 30, window=frameThree, anchor="n")
+        self.canvas3.bind_all('<MouseWheel>', self.event_onMouseWheel)
+
+        frame4 = tk.Frame(self.root)
         self.notebook.add(frame4, text="Method_Four")
-        # label4 = tkinter.Label(frame4, text="페이지3의 내용")
-        # label4.pack()
-        self.mframe = [frame1, frame2, frame3, frame4]
-        self.mframeIdx = 0
+        self.canvas4 = tk.Canvas(frame4, width=360, height=1400, bg='white')
+        scroll4 = tk.Scrollbar(frame4, command=self.canvas4.yview)
+        self.canvas4.config(yscrollcommand=scroll4.set, scrollregion=self.canvas4.bbox("all"))
+        # self.canvas4.config(yscrollcommand=scroll4.set, scrollregion=(0, 0, 0, 1400))
+        self.canvas4.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        scroll4.pack(side=tk.RIGHT, fill=tk.Y)
+        frameFour = tk.Frame(self.canvas4, width=350, height=1000, bg="white")
+        self.canvas4.create_window(C_MENU_POS_X + 180, 30, window=frameFour, anchor="n")
+        self.canvas4.bind_all('<MouseWheel>', self.event_onMouseWheel)
+
+        self.mframe = [frameOne, frameTwo, frameThree, frameFour, frame1, frame2, frame3, frame4]
+
+        self.notebook.select(self.mframeIdx)
         self.root.config(menu=self.menubar)
 
         self.button_dict = {}
         self.filename = ""
+        self.tresult = ""
 
-    def selectTab(self,event):
-        # if event.widget.index("current") == 0:
-        #     print("One!")
-        # else:
-        #     print("Other!")
+    def event_selectTab(self, event):
         # print(event.widget.index("current"))
         self.mframeIdx = event.widget.index("current")
         self.menu_load(autoLoad=1)
 
-    def on_button_3(self,event):
-        if event.widget.identify(event.x, event.y) == 'label':
-            index = event.widget.index('@%d,%d' % (event.x, event.y))
-            print(event.widget.tab(index, 'text'))
+    def event_onMouseWheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas2.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas3.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas4.yview_scroll(int(-1*(event.delta/120)), "units")
 
-
-    def dynamic_checkBox(self, button_dict, idx):
+    def dynamic_checkBox(self, button_dict, idx, tText=""):
         self.button_dict = button_dict
-        row = len(self.button_dict) + 1
+        row = len(self.button_dict) + 2
 
-        for i, key in enumerate(self.button_dict, 1):
+        tTitleText = tk.Label(self.mframe[idx], text=tText,fg="blue", bg="#FF0")
+        tTitleText.grid(row=0, sticky=tk.N)
+
+        for i, key in enumerate(self.button_dict, 2):
             self.button_dict[key] = tk.IntVar()  # set all values of the dict to intvars
             # set the variable of the checkbutton to the value of our dictionary so that our dictionary is updated each time a button is checked or unchecked
-            c = tk.Checkbutton(self.mframe[idx], text=key, variable=self.button_dict[key])
+            c = tk.Checkbutton(self.mframe[idx], text=key, variable=self.button_dict[key], bg='white')
             c.grid(row=i, sticky=tk.W)
 
-        include = tk.Button(self.mframe[idx], text='Include',
-                            command=self.query_include)
-        include.grid(row=row, sticky=tk.W)
+        tinclude = tk.Button(self.mframe[idx], text='Include', command=self.query_include)
+        tinclude.grid(row=row, sticky=tk.W)
 
-        exclude = tk.Button(self.mframe[idx], text='Exclude',
-                            command=self.query_exclude)
-        exclude.grid(row=row, sticky=tk.E, padx=50)
+        texclude = tk.Button(self.mframe[idx], text='Exclude', command=self.query_exclude)
+        texclude.grid(row=row, sticky=tk.E, padx=50)
 
-        quit = tk.Button(self.mframe[idx], text='Quit', command=self.root.quit)
-        quit.grid(row=row + 1, sticky=tk.W)
+        trunning = tk.Button(self.mframe[idx], text='Running_Result', command=self.running_result)
+        trunning.grid(row=row + 1, sticky=tk.W)
 
     def query_include(self):
         for key, value in self.button_dict.items():
@@ -2069,43 +2158,55 @@ class mainMenu_GUI():
             if not value.get():
                 print(key)
 
+    def running_result(self):
+        self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
+
     def menu_load(self, autoLoad=0):
         if(autoLoad == 0):
+            self.menu_new() #초기화
             self.filename = filedialog.askopenfilename(initialdir='./', title='Select file',
                                                   filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+
+
         if self.filename:
             try:
                 print("Load %s" % self.filename)
             except:  # <- naked except is a bad idea
                 messagebox.showerror("Load Data File", "Failed to read file\n'%s'" % self.filename)
-            tdata = load_DPA_file(self.filename)
-            ret_type_one = preprocess(tdata)
-            print(ret_type_one)
-            button_dict = {'.txtt': 0, '.pyy': 1, '.cc': 0, '.jpegg': 0}
-            print(ret_type_one.group_sub)
-            print(ret_type_one.title)
-            old_tdic = dict(ret_type_one.group_sub)
-            old_tset = list(ret_type_one.group_sub)
 
-            old_tdic_mix = dict(ret_type_one.group_sub+'\t\t|'+ret_type_one.title)
-            print(list(old_tdic.values()))
-            swap_tdic = {value:key for key, value in old_tdic.items()}
-            swap_tdic_mix = dict([(value, key) for key, value in old_tdic_mix.items()])
-            # swap_tdic = {value:key for key, value in old_tdic.items()}
+            tempdata = load_DPA_file(self.filename)
+            self.tdata = tempdata.copy()
+            ret_type_one, ret_type_two, ret_type_three, ret_type_four = preprocess(tempdata)
+            # print(ret_type_one)
+            # print(ret_type_one.group_sub)
+            # print(ret_type_one.title)
+            # old_tdic = dict(ret_type_one.group_sub)
 
-            # print(swap_tdic)
+            old_tdic_mix = {key + '\t\t|' + value: value for key, value in dict(ret_type_two).items()}
+            # print("old_tdic_mix",old_tdic_mix)
+            old_tdic_mix2 = dict(ret_type_one.group_sub+'\t\t|'+ret_type_one.title)
+            # print('old_tdic_mix3', old_tdic_mix3)
+            swap_tdic_mix2 = dict([(value, key) for key, value in old_tdic_mix2.items()])
+            old_tdic_mix4 = dict(ret_type_four.title + '\t|' + ret_type_four.point_name+'|'
+                     +ret_type_four.tx.astype(str)+','+ret_type_four.ty.astype(str)+','+ret_type_four.tz.astype(str))
+            swap_tdic_mix4 = {value:key for key, value in old_tdic_mix4.items()}
+            # print("old_tdic_mix4", old_tdic_mix4)
+
             #키는 중복될수 있어, Value로 데이터를 보내려함
             if(self.mframeIdx == 0):
-                self.dynamic_checkBox(swap_tdic, self.mframeIdx)
+                self.dynamic_checkBox(old_tdic_mix, self.mframeIdx, '계산시 기준으로 설정할 포인트 그룹을 선택하세요 |중복개수')
             elif(self.mframeIdx == 1):
-                self.dynamic_checkBox(swap_tdic_mix, self.mframeIdx)
-            # button_dict2 = {'.txttt': 0, '.pyyy': 1, '.ccc': 0, '.jpeggg': 0}
-            # print("test")
-            # self.root.after(5000, self.menu_load())
+                self.dynamic_checkBox(swap_tdic_mix2, self.mframeIdx, '계산시 기준으로 설정할 포인트 그룹을 선택하세요 |프로젝트명')
+            elif(self.mframeIdx == 2):
+                self.dynamic_checkBox(swap_tdic_mix2, self.mframeIdx, '계산시 삭제할 포인트 그룹을 선택하세요 |프로젝트명')
+            elif(self.mframeIdx == 3):
+                self.dynamic_checkBox(swap_tdic_mix4, self.mframeIdx, '계산시 삭제할 점들을 선택하세요 |프로젝트명|포인트그룹|좌표')
             return
-        # print(filename)
 
     def menu_save(self):
+        # if(self.tresult.empty()):
+        #     print('저장할 데이터가 없습니다.')
+        #     return
         filename = filedialog.asksaveasfilename(initialdir='./', title='Select file',
                                                 filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
         if filename:
@@ -2113,12 +2214,11 @@ class mainMenu_GUI():
                 print("Save %s" % filename)
             except:  # <- naked except is a bad idea
                 messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % filename)
+            save_DPA_file(self.tresult, filename)
             return
-        print(filename)
 
     def main(self):
-        # self.notebook.bind('<3>', self.on_button_3)
-        self.notebook.bind('<<NotebookTabChanged>>', self.selectTab)
+        self.notebook.bind('<<NotebookTabChanged>>', self.event_selectTab)
         self.root.mainloop()
 
     # def main2(self):
@@ -2137,15 +2237,17 @@ gui = mainMenu_GUI()
 gui.main()
 # display_mainview()
 print(1/0)
+
 # relative_position_based_on_refer_point()
 # relative_position_based_on_many_points()
 # move_origin_from_refer_point()
+# tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
 tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
 
-ret_type_one = preprocess(tdata)
-print(ret_type_one)
-# tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
-# save_DPA_file(tresult, "result.txt")
+# ret_type_one = preprocess(tdata)
+# print(ret_type_one)
+tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
+save_DPA_file(tresult, "result.txt")
 
 # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
 # test()
