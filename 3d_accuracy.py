@@ -24,6 +24,7 @@ pd.set_option('display.max_columns', 50)
 # 표시할 가로의 길이
 pd.set_option('display.width', 140)
 
+pd.options.display.float_format = '{:.4f}'.format
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
 
@@ -942,21 +943,24 @@ def load_DPA_file(fname):
 
 def save_DPA_file(tdata, fname):
     print("///////save_DPA_file///////")
-    if(tdata.group_first.all()):
+    if(tdata.group_first.any()):
         tdata = tdata.drop(['group_first'], axis=1)
-    if(tdata.group_sub.all()):
+        print("is group_first")
+    if(tdata.group_sub.any()):
         tdata = tdata.drop(['group_sub'], axis=1)
+        print("is group_sub")
 
     tdata.point_name = '"' + tdata.point_name + '"'
 
-    tdata.to_csv(fname+"ext", mode='w', index=False, header=False, sep=',', quotechar=" ")
+    tdata.to_csv(fname+"ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
 
-    if(tdata.seq.all()):
+    if(tdata.seq.any()):
         tdata = tdata.drop(['seq'], axis=1)
+        print("is seq")
 
-    tdata.to_csv(fname, mode='w', index=False, header=False, sep=',', quotechar=" ")
+    tdata.to_csv(fname, mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
 
-    print(tdata)
+    # print(tdata)
     print(fname)
     pass
 
@@ -1248,8 +1252,27 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
     tdata_second_without_type = check_duplicate(tdata, tdata_second_without_type)
 
     #sequence path
-    tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype
-    tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">"+ ttype
+    # for i, tone in tdata_first_without_type.iterrows():
+    #     # print(")))))))))", ">", ttype + str(tone.group_first))
+    #     # print("^^^^^^^^^^^",tdata_first_without_type['seq'][i], ' ***** ',tone.seq + ttype)
+    #     tone.seq = str(tone.seq) + ttype + str(tone.group_first)
+    # for i, ttwo in tdata_second_without_type.iterrows():
+    #     # print(")))))))))", ">", ttype + str(tone.group_first))
+    #     # print("^^^^^^^^^^^", tdata_first_without_type['seq'][i], ' ***** ', tone.seq + ttype)
+    #     ttwo.seq = str(ttwo.seq) + ttype + str(ttwo.group_first)
+    # print('tdata_first_without_type',tdata_first_without_type)
+    # print('tdata_second_without_type',tdata_second_without_type)
+
+        # tone['seq'] = tone['seq'] + ">" + ttype + tone['group_first'].astype("object")
+        # print('seq', tone.seq.type, tone.group_first.type)
+
+    tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
+    # tdata_first_without_type['seq'] =  list(ttype) + tdata_first_without_type['group_first'].astype("object")
+    # tdata_second_without_type['seq'] = tdata_second_without_type['seq'].astype("object") + ">" + ttype + tdata_second_without_type['group_first'].astype("object")
+    tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">" + ttype +' '+ tdata_second_without_type['group_first'].astype(str)
+
+    # return 1/0
+
 
     tdata = pd.concat([tdata, tdata_first_without_type, tdata_second_without_type])
     tdata = tdata.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
@@ -1412,8 +1435,9 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
         tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('final tvalidData',tvalidData)
 
-    return tvalidData
+
     print("\nRRRRRRRRRRRRRR")
+    return tvalidData
     # tvalidData = update_position_using_relative_2title('DISP', '403589_DISP', '770_MANE_ABS2_403589', tvalidData)
 
     # return ttitle_all
@@ -1434,7 +1458,7 @@ def auto_recovery_3d_points_on_each_of_coordinate(tData):
     #     #     if(tkey[1] == )
     #     #         print(tlabel, '\n', np.array(tdata[['tx', 'ty', 'tz']].reset_index(drop=True)))
     print("TTTTTTTTTTTTTT")
-    return ttitle_all
+    return tvalidData
 
     for tidx, (tcount, tlabel) in enumerate(tData_grp):
         print(tidx, tcount, tlabel)
@@ -1798,7 +1822,7 @@ def preprocess(tData):
         .sort_values(['title'], ascending=False)
     # print('\ndf9_group_sub\n',df9_group_sub)
     # print('\ndf9_group_sub\n',df9_group_sub[df9_group_sub.values>1])
-    # df9_group_sub_2_more = df9_group_sub[df9_group_sub.values>1]
+    df9_group_sub_2_more = df9_group_sub[df9_group_sub.values>1]
 
     print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
     tData_grp = np.concatenate(
