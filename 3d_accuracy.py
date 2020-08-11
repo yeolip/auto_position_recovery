@@ -2,6 +2,7 @@ import numpy as np
 import math
 import cv2
 import sys
+import copy
 import csv
 import pandas as pd
 from itertools import combinations
@@ -25,6 +26,7 @@ pd.set_option('display.max_columns', 50)
 pd.set_option('display.width', 140)
 
 pd.options.display.float_format = '{:.4f}'.format
+
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
 
@@ -1860,6 +1862,39 @@ def preprocess(tDatas):
     # print('tvalidData', tvalidData)
 
     return df5_list, tData_grp, tData_grp2, tvalidData
+
+def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    tdebug = 1
+    print("extract_dup_type_between_titles", tfirst, tsecond, 'inputlist=',inputlist)
+    tdata2 = tdata.copy()
+    ret = False
+    retType = ""
+
+    tdata2_dup = tdata2[['group_sub', 'title']][(tdata2['title'] == tfirst) | (tdata2['title'] == tsecond)].drop_duplicates()
+
+    tdata2_dup = tdata2_dup.groupby('group_sub').count() \
+        .sort_values(['title'], ascending=False)
+    print('tdata2_dup', tdata2_dup)
+
+    tdata2_dup2 = tdata2_dup[tdata2_dup.values>1]
+    print('tdata2_dup2', tdata2_dup2.count(), tdata2_dup2)
+
+    if(tdata2_dup2.count().title >=1):
+        if(inputlist == []):
+            ret = True
+            retType = tdata2_dup2.index[0]
+            print(ret, retType)
+        else:
+            for iname, icount in inputlist:
+                for lname in tdata2_dup2.index:
+                    if(iname == lname):
+                        ret = True
+                        retType = lname
+
+    print("match", ret, retType)
+    return ret, retType
+
 def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     print("//////////",funcname(),"//////////")
     tdebug = 0
@@ -1890,9 +1925,13 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     print('\ndf7_title\n',df7_title)
 
     # [group_sub] 기준으로 (중복 제거) title의 분류된 label 갯수
-    # df9_group_sub = df5_list.groupby('group_sub').count() \
-    #     .sort_values(['title'], ascending=False)
-    # print('\ndf9_group_sub\n',df9_group_sub)
+    df9_group_sub = df5_list.groupby('group_sub').count() \
+        .sort_values(['title'], ascending=False)
+    print('\ndf9_group_sub\n',df9_group_sub)
+    df9_group_sub_2_more = df9_group_sub[df9_group_sub.values > 1]
+
+    tData_grp2 = np.concatenate(
+        (np.column_stack(df9_group_sub_2_more.index.values).T, np.column_stack(df9_group_sub_2_more.title).T), axis=1).tolist()
 
     tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
     print('tvalidData', tvalidData)
@@ -1945,6 +1984,7 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
             tData_grp.append([ta, tb])
             # break
     print('tData_grp', tData_grp)
+    # tData_grp2 = copy.deepcopy(tData_grp)
 
     df5_list2 = df5_list.sort_values(['group_sub', 'title'], ascending=(True, True)).reset_index(drop=True)
     print('\ndf5_list2', df5_list2)
@@ -2007,11 +2047,19 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('combination_of_title',combination_of_title)
     #combination_of_title을 모든 경우의 수로 넣지말고, 체크된 포인트그룹 커버하는 수의 조합으로 for문을 돌린다면
-    for title_one, title_two in combination_of_title:
-        print('\t', jtype, '->', title_one, 'vs', title_two)
-        tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
-    print('final tvalidData',tvalidData)
+    # for title_one, title_two in combination_of_title:
+    #     print('\t', jtype, '->', title_one, 'vs', title_two)
+    #     tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
 
+    for title_one, title_two in combination_of_title:
+        # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
+        ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp2 )
+        if(ret == True):
+            print('\t', jtype, '->', title_one, 'vs', title_two)
+            tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+    print('final tvalidData',tvalidData)
+    # print('hehe', df5_list['group_sub'][df5_list_dup['title'] == title_one])
+    # extract_dup_type_between_titles('403589_DISP','770_MANE_ABS2_403589', tvalidData, tData_grp2 )
 
     print("\nRRRRRRRRRRRRRR")
     return tvalidData
