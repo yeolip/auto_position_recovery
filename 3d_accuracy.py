@@ -24,8 +24,13 @@ pd.set_option('display.max_rows', 1000)
 pd.set_option('display.max_columns', 50)
 # 표시할 가로의 길이
 pd.set_option('display.width', 140)
-
+# 출력값 소숫점4자리로 설정
 pd.options.display.float_format = '{:.4f}'.format
+
+C_TAB1 = 0
+C_TAB2 = 1
+C_TAB3 = 2
+C_TAB4 = 3
 
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
@@ -945,9 +950,6 @@ def load_DPA_file(fname):
 
 def save_DPA_file(tdata, fname):
     print("///////save_DPA_file///////")
-    if(tdata.group_first.any()):
-        tdata = tdata.drop(['group_first'], axis=1)
-        print("is group_first")
     if(tdata.group_sub.any()):
         tdata = tdata.drop(['group_sub'], axis=1)
         print("is group_sub")
@@ -956,6 +958,9 @@ def save_DPA_file(tdata, fname):
 
     tdata.to_csv(fname+"ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
 
+    if(tdata.group_first.any()):
+        tdata = tdata.drop(['group_first'], axis=1)
+        print("is group_first")
     if(tdata.seq.any()):
         tdata = tdata.drop(['seq'], axis=1)
         print("is seq")
@@ -1895,14 +1900,91 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
     print("match", ret, retType)
     return ret, retType
 
+def parsing_selected_data_by_tabType(tIdx, dictData):
+    nCnt = 0
+    nRet = True
+    retData = ""
+    for key, value in dictData.items():
+        if value.get():
+            nCnt += 1
+    if(nCnt == 0):
+        retData = "체크박스가 선택되지 않았습니다."
+        print(retData)
+        return False, tIdx, dictData, retData
+
+    tdictData = []
+    tdicDataValue = []
+
+    if(tIdx == C_TAB1):
+        print('parsing_selected_data_by_tabType', tIdx)
+        for key, value in dictData.items():
+            if (value.get() and int(key.split('|')[1]) > 1):
+                tdictData.append(key.split('\t')[0])
+                tdicDataValue.append(key.split('|')[1])
+        if(tdictData == []):
+            retData = "중복개수 2이상인 포인트 그룹이 선택되지 않았으니, 다시 선택하시오!!"
+            print(retData)
+            return False, tIdx, dictData, retData
+        print(tdictData)
+        print(tdicDataValue)
+        retData = np.concatenate((np.array(tdictData).reshape(-1,1), np.array(tdicDataValue).reshape(-1,1)), axis=1)
+        print(retData)
+    elif(tIdx == C_TAB2):
+        print('parsing_selected_data_by_tabType', tIdx)
+        for key, value in dictData.items():
+            if value.get():
+                tdictData.append(key.split('\t')[0])
+                tdicDataValue.append(key.split('|')[1])
+        print(tdictData)
+        print(tdicDataValue)
+        for i in tdictData:
+            # print(tdictData.count(i),'개')
+            if(int(tdictData.count(i))==1):
+                retData = retData + i + " "
+                nRet = False
+        if(nRet == False):
+            retData = retData + "포인트 그룹이 1개씩 선택된 되었습니다. 포인트 그룹을 2개이상 선택하시오!!"
+            print(retData)
+            return nRet, tIdx, dictData, retData
+        retData = np.concatenate((np.array(tdictData).reshape(-1, 1), np.array(tdicDataValue).reshape(-1, 1)), axis=1)
+        print(retData)
+    elif (tIdx == C_TAB3):
+        print('parsing_selected_data_by_tabType', tIdx)
+        for key, value in dictData.items():
+            if value.get():
+                tdictData.append(key.split('|')[1])
+                tdicDataValue.append(key.split('\t')[0])
+        print(tdictData)
+        print(tdicDataValue)
+        retData = np.concatenate((np.array(tdictData).reshape(-1, 1), np.array(tdicDataValue).reshape(-1, 1)), axis=1)
+        print(retData)
+    elif(tIdx == C_TAB4):
+        print('parsing_selected_data_by_tabType', tIdx)
+        for key, value in dictData.items():
+            if value.get():
+                tdictData.append(key.split('\t')[0])
+                tdicDataValue.append([key.split('\t')[0],key.split('|')[1],
+                                      key.split('|')[2].split(',')[0],key.split('|')[2].split(',')[1],key.split('|')[2].split(',')[2]])
+        print(tdictData)
+        print(tdicDataValue)
+
+    return nRet, tIdx, dictData, retData
+
 def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     print("//////////",funcname(),"//////////")
+    retFlag = True
+    retText = ""
     tdebug = 0
     print("Tab#",tIdx)
     for key, value in dictData.items():
         if value.get():
             print(key)
     print("")
+    retC, tIdx, dictData, retData = parsing_selected_data_by_tabType(tIdx, dictData)
+
+    if(retC == False):
+        retFlag = retC
+        retText = retData
 
     tData = tDatas.copy()
     tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
@@ -1911,6 +1993,7 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     # print(tData)
     print(tData.head())
     print(tData.tail())
+    return retFlag, retText, tData
 
     print("**" * 50)
         # Labeling이 동일한 Title 추출 (기준점을 찾기위함)
@@ -2062,7 +2145,7 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     # extract_dup_type_between_titles('403589_DISP','770_MANE_ABS2_403589', tvalidData, tData_grp2 )
 
     print("\nRRRRRRRRRRRRRR")
-    return tvalidData
+    return retFlag, retText, tvalidData
 
 count = 0
 
@@ -2240,6 +2323,7 @@ C_MENU_HEIGHT = 480
 C_MENU_POS_X = 100
 C_MENU_POS_Y = 100
 
+
 class mainMenu_GUI():
     def __init__(self):
         self.root = tk.Tk()
@@ -2388,7 +2472,9 @@ class mainMenu_GUI():
 
     def running_result(self):
         # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
-        self.tresult = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
+        ret, retData, self.tresult = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
+        if(ret == False):
+            print(retData)
 
     def menu_load(self, autoLoad=0):
         if(autoLoad == 0):
