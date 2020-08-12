@@ -924,7 +924,7 @@ def move_origin_from_refer_point():
     print('inverse',(t_matrix_inv[0:3,0:3] * pTest[5:10].T).T + t_matrix_inv[0:3,3])
 
 def load_DPA_file(fname):
-    print("///////load_DPA_file///////")
+    print("//////////", funcname(), "//////////")
     # tData = []
     # fp = open(fname, 'r', encoding='utf-8')
     # for row in csv.reader(fp, skipinitialspace= True, delimiter=','):
@@ -949,7 +949,7 @@ def load_DPA_file(fname):
     return df
 
 def save_DPA_file(tdata, fname):
-    print("///////save_DPA_file///////")
+    print("//////////", funcname(), "//////////")
     if(tdata.group_sub.any()):
         tdata = tdata.drop(['group_sub'], axis=1)
         print("is group_sub")
@@ -1869,7 +1869,7 @@ def preprocess(tDatas):
     return df5_list, tData_grp, tData_grp2, tvalidData
 
 def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
-    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    print("//////////",funcname(),"//////////")
     tdebug = 1
     print("extract_dup_type_between_titles", tfirst, tsecond, 'inputlist=',inputlist)
     tdata2 = tdata.copy()
@@ -1891,7 +1891,7 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
             retType = tdata2_dup2.index[0]
             print(ret, retType)
         else:
-            for iname, icount in inputlist:
+            for icount, iname, icomp in inputlist:
                 for lname in tdata2_dup2.index:
                     if(iname == lname):
                         ret = True
@@ -1901,6 +1901,7 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
     return ret, retType
 
 def parsing_selected_data_by_tabType(tIdx, dictData):
+    print("//////////",funcname(),"////////// ", tIdx)
     nCnt = 0
     nRet = True
     retData = ""
@@ -1916,11 +1917,10 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
     tdicDataValue = []
 
     if(tIdx == C_TAB1):
-        print('parsing_selected_data_by_tabType', tIdx)
         for key, value in dictData.items():
             if (value.get() and int(key.split('|')[1]) > 1):
-                tdictData.append(key.split('\t')[0])
-                tdicDataValue.append(key.split('|')[1])
+                tdictData.append(key.split('|')[1])
+                tdicDataValue.append(key.split('\t')[0])
         if(tdictData == []):
             retData = "중복개수 2이상인 포인트 그룹이 선택되지 않았으니, 다시 선택하시오!!"
             print(retData)
@@ -1930,7 +1930,6 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         retData = np.concatenate((np.array(tdictData).reshape(-1,1), np.array(tdicDataValue).reshape(-1,1)), axis=1)
         print(retData)
     elif(tIdx == C_TAB2):
-        print('parsing_selected_data_by_tabType', tIdx)
         for key, value in dictData.items():
             if value.get():
                 tdictData.append(key.split('\t')[0])
@@ -1949,7 +1948,6 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         retData = np.concatenate((np.array(tdictData).reshape(-1, 1), np.array(tdicDataValue).reshape(-1, 1)), axis=1)
         print(retData)
     elif (tIdx == C_TAB3):
-        print('parsing_selected_data_by_tabType', tIdx)
         for key, value in dictData.items():
             if value.get():
                 tdictData.append(key.split('|')[1])
@@ -1959,7 +1957,6 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         retData = np.concatenate((np.array(tdictData).reshape(-1, 1), np.array(tdicDataValue).reshape(-1, 1)), axis=1)
         print(retData)
     elif(tIdx == C_TAB4):
-        print('parsing_selected_data_by_tabType', tIdx)
         for key, value in dictData.items():
             if value.get():
                 tdictData.append(key.split('\t')[0])
@@ -1985,105 +1982,52 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     if(retC == False):
         retFlag = retC
         retText = retData
+        return retFlag, retText, tDatas
 
+    ##########################################################################
     tData = tDatas.copy()
     tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
     tData['group_sub'] = tData['point_name'].str.split('_').str[0]
     tData['seq'] = ""
-    # print(tData)
-    print(tData.head())
-    print(tData.tail())
-    return retFlag, retText, tData
+    if(tdebug):
+        print(tData.head())
+        print(tData.tail())
 
     print("**" * 50)
-        # Labeling이 동일한 Title 추출 (기준점을 찾기위함)
     # [title, group_sub] 데이터중에 중복된 데이터 삭제
     df3 = tData[['group_sub', 'title']].drop_duplicates()
     df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
     print('\ndf5_list\n',df5_list)
 
-    # [title] 기준으로 (중복 제거) group_sub의 분류된 label 갯수
-    df7_title = df5_list.groupby('title').count() \
-        .sort_values(['group_sub'], ascending=False)
-    print('\ndf7_title\n',df7_title)
-
-    # [group_sub] 기준으로 (중복 제거) title의 분류된 label 갯수
-    df9_group_sub = df5_list.groupby('group_sub').count() \
-        .sort_values(['title'], ascending=False)
-    print('\ndf9_group_sub\n',df9_group_sub)
-    df9_group_sub_2_more = df9_group_sub[df9_group_sub.values > 1]
-
-    tData_grp2 = np.concatenate(
-        (np.column_stack(df9_group_sub_2_more.index.values).T, np.column_stack(df9_group_sub_2_more.title).T), axis=1).tolist()
-
-    tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
-    print('tvalidData', tvalidData)
-    tmodifiedData = tvalidData
-
-    ###############################################################################################
-    # 첫번째 좌표묶음기준으로 나머지 좌표들의 point_name이 없는 부분을 모두 생성하여, 더미 (0,0,0)을 생성함
-    tfirst_title = pd.DataFrame()
-    for tnum, (tkey, tdata) in enumerate(tvalidData.groupby(['title'])):
-        # print('key', tnum, tkey,tdata )
-        if(tnum == 0):
-            tfirst_title = tdata
-        else:
-            tfirst_title = compare_between_title(tfirst_title, tdata)
-
-    # print('tfirst_title', tfirst_title)
-
-    # 첫번째 모두 생성하여, 더미 (0,0,0)을 기준으로 나머지 좌표묶음들의 더미(0,0,0) 생성함
-    tdata_first = tfirst_title.copy()
-    tsecond_title_all = pd.DataFrame()
-    tsecond_title = pd.DataFrame()
-    for tnum, (tkey, tdata) in enumerate(tvalidData.groupby(['title'])):
-        # print('key', tnum, tkey,tdata )
-        if(tnum == 0):
-            continue
-        else:
-            tsecond_title = tdata
-            tsecond_title_all = pd.concat([tsecond_title_all, compare_between_title(tsecond_title, tdata_first)])
-    if(tdebug):
-        print('tfirst_title', tfirst_title)
-        print('tsecond_title_all', tsecond_title_all)
-
-    ttitle_all = pd.concat([tfirst_title, tsecond_title_all]).reset_index(drop=True)
-    # print('tfirst_title', tfirst_title)
-    if(tdebug):
-        print('ttitle_all', ttitle_all)
-    #################################################################################
-
-    df8_list_all = ttitle_all[['group_sub', 'title']].drop_duplicates().reset_index(drop=True)
-    print('\ndf8_list_all\n',df8_list_all)
-
     print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
     tData_grp= []
-    for tnum in range(0,len(df5_list.group_sub.value_counts().index),1):
-        # print(tnum)
-        ta = int(df5_list.group_sub.value_counts()[tnum])
-        if(ta > 1 ):
-            tb = df5_list.group_sub.value_counts().index[tnum]
-            # print(ta, tb)
-            tData_grp.append([ta, tb])
-            # break
+    if (tIdx == C_TAB1):
+        tData_grp = copy.deepcopy(retData.tolist())
+    else:
+        for tnum in range(0,len(df5_list.group_sub.value_counts().index),1):
+            # print(tnum)
+            ta = int(df5_list.group_sub.value_counts()[tnum])
+            if(ta > 1 ):
+                tb = df5_list.group_sub.value_counts().index[tnum]
+                # print(ta, tb)
+                tData_grp.append([ta, tb])
+                # break
+        # [group_sub] 기준으로 (중복 제거) title의 분류된 label 갯수
+        # df9_group_sub = df5_list.groupby('group_sub').count() \
+        #     .sort_values(['title'], ascending=False)
+        # print('\ndf9_group_sub\n', df9_group_sub)
+        # df9_group_sub_2_more = df9_group_sub[df9_group_sub.values > 1]
+
+        # tData_grp = np.concatenate(
+        #     (np.column_stack(df9_group_sub_2_more.index.values).T, np.column_stack(df9_group_sub_2_more.title).T), axis=1).tolist()
+
     print('tData_grp', tData_grp)
-    # tData_grp2 = copy.deepcopy(tData_grp)
+    tData_grp_add = copy.deepcopy(tData_grp)
 
-    df5_list2 = df5_list.sort_values(['group_sub', 'title'], ascending=(True, True)).reset_index(drop=True)
-    print('\ndf5_list2', df5_list2)
-    df5_list_dup = df5_list2.copy()
-    # print('df5_list',df5_list)
-    # [i[1] for i in tData_grp]
-    df5_list_dup2 = pd.DataFrame()
+    ##################################################
 
-    # for i, row in df5_list2.iterrows():
-    #     for jcount, jtype in tData_grp:
-    #         if(jtype == row['group_sub']):
-    #             pandas_insert_row(i,df5_list_dup2, df5_list2)
-    #
-    # print('df5_list_dup2', df5_list_dup2)
-
-    for i, row in df5_list2.iterrows():
+    df5_list_dup = df5_list.copy()
+    for i, row in df5_list.iterrows():
         # print(i, row['group_sub'], row['title'])
         bchk = 1
         for jcount, jtype in tData_grp:
@@ -2093,28 +2037,29 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
         if(bchk == 1):
             df5_list_dup = df5_list_dup.drop(i)
 
-    df5_list_dup = df5_list_dup.reset_index(drop=True)
+    df5_list_dup = df5_list_dup.sort_values(['group_sub', 'title'], ascending=(True, True)).reset_index(drop=True)
     print('\ndf5_list_dup', df5_list_dup)
 
-    for i, (jcount, jtype) in enumerate(tData_grp):
+    for i, (jcount, jtype) in enumerate(tData_grp_add):
         print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
-        tData_grp[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
-        # tData_grp[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        tData_grp_add[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+    print('\ntData_grp_add', tData_grp_add)
 
-    print('\ntData_grp', tData_grp)
+    #################################################################
 
-    # update_list = df8_list_all.copy()
-    # for i, tdat in df8_list_all.iterrows():
-    #     for j, tdat2 in df5_list_dup.iterrows():
-    #         if(tdat['group_sub'] == tdat2['group_sub'] and tdat['title'] == tdat2['title']):
-    #             update_list = update_list.drop(i, axis = 0)
-    #
-    # print('\nupdate_list',update_list)
+    tvalidData = tData[~tData['point_name'].str.contains('\*')].reset_index(drop=True)
+    print('tvalidData', tvalidData)
+
+    ################################################################
+
+    # [title] 기준으로 (중복 제거) group_sub의 분류된 label 갯수
+    df7_title = df5_list.groupby('title').count().sort_values(['group_sub'], ascending=False)
+    print('\ndf7_title\n',df7_title)
 
     #같은 point_name의 title을 2가지씩 추출할 조합
     combination_of_title = list(combinations(list(df7_title.index), 2))
-    print('combination', )
-    for i, (jcount, jtype, jcomp) in enumerate(tData_grp):
+    print('combination', combination_of_title)
+    for i, (jcount, jtype, jcomp) in enumerate(tData_grp_add):
         # if(jtype == "MANE"):
         #     continue
         print(i, jcomp)
@@ -2130,13 +2075,9 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('combination_of_title',combination_of_title)
     #combination_of_title을 모든 경우의 수로 넣지말고, 체크된 포인트그룹 커버하는 수의 조합으로 for문을 돌린다면
-    # for title_one, title_two in combination_of_title:
-    #     print('\t', jtype, '->', title_one, 'vs', title_two)
-    #     tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
-
     for title_one, title_two in combination_of_title:
         # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
-        ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp2 )
+        ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add )
         if(ret == True):
             print('\t', jtype, '->', title_one, 'vs', title_two)
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
