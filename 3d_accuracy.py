@@ -1894,8 +1894,10 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
             for icount, iname, icomp in inputlist:
                 for lname in tdata2_dup2.index:
                     if(iname == lname):
-                        ret = True
-                        retType = lname
+                        print("Project Check (type=%s)({%s},{%s}),({%s},{%s})"%(iname, tfirst,icomp.count(tfirst) ,tsecond, icomp.count(tsecond) ))
+                        if(int(icomp.count(tfirst))>=1 and int(icomp.count(tsecond))>=1):
+                            ret = True
+                            retType = lname
 
     print("match", ret, retType)
     return ret, retType
@@ -1993,6 +1995,26 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
         print(tData.head())
         print(tData.tail())
 
+    if(tIdx == C_TAB3):
+        tModifiedData = tData.copy() #pd.DataFrame()
+        for ititle, itype in retData.tolist():
+            tModifiedData = tModifiedData[~((tModifiedData['title'] == ititle) & (tModifiedData['group_sub'] == itype))]
+        print(tModifiedData)
+        tData = tModifiedData
+    elif(tIdx == C_TAB4):
+        print("Tab4")
+        tModifiedData = tData.copy() #pd.DataFrame()
+        for ititle, itype in retData.tolist():
+            # tdata2_dup = tdata2[['group_sub', 'title']][(tdata2['title'] == tfirst) | (tdata2['title'] == tsecond)].drop_duplicates()
+
+            # tData[~tData['title']==ititle]
+            # tData[~tData['title']==ititle]
+            tModifiedData = tModifiedData[~((tModifiedData['title'] == ititle) & (tModifiedData['group_sub'] == itype))]
+            # pd.merge(tModifiedData, tModifiedData2)
+            # pd.concat([tModifiedData, tModifiedData2], axis=1)
+        print(tModifiedData)
+        tData = tModifiedData
+        return retFlag, retText, tDatas
     print("**" * 50)
     # [title, group_sub] 데이터중에 중복된 데이터 삭제
     df3 = tData[['group_sub', 'title']].drop_duplicates()
@@ -2003,6 +2025,8 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     tData_grp= []
     if (tIdx == C_TAB1):
         tData_grp = copy.deepcopy(retData.tolist())
+    # elif (tIdx == C_TAB2):
+    #     for i in retData.tolist()
     else:
         for tnum in range(0,len(df5_list.group_sub.value_counts().index),1):
             # print(tnum)
@@ -2040,10 +2064,28 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     df5_list_dup = df5_list_dup.sort_values(['group_sub', 'title'], ascending=(True, True)).reset_index(drop=True)
     print('\ndf5_list_dup', df5_list_dup)
 
-    for i, (jcount, jtype) in enumerate(tData_grp_add):
-        print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
-        tData_grp_add[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
-    print('\ntData_grp_add', tData_grp_add)
+    if (tIdx == C_TAB2):
+        print("2")
+        # retData.tolist()
+        for i, (jcount, jtype) in enumerate(tData_grp_add):
+            tAvailable = []
+            lproject = list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype])
+            print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+
+            print("Check available according to checked box")
+            for ktype, kproject in retData.tolist():
+                for lpro in lproject:
+                    if(kproject == lpro and ktype == jtype):
+                        tAvailable.append(lpro)
+            # if(len(tAvailable) > 0):
+            tData_grp_add[i].append(tAvailable)
+        print('\ntData_grp_add', tData_grp_add)
+
+    else:
+        for i, (jcount, jtype) in enumerate(tData_grp_add):
+            print(jtype, '->', list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+            tData_grp_add[i].append(list(df5_list_dup['title'][df5_list_dup['group_sub'] == jtype]))
+        print('\ntData_grp_add', tData_grp_add)
 
     #################################################################
 
