@@ -1966,6 +1966,7 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
                                       key.split('|')[2].split(',')[0],key.split('|')[2].split(',')[1],key.split('|')[2].split(',')[2]])
         print(tdictData)
         print(tdicDataValue)
+        retData = tdicDataValue
 
     return nRet, tIdx, dictData, retData
 
@@ -2004,17 +2005,11 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     elif(tIdx == C_TAB4):
         print("Tab4")
         tModifiedData = tData.copy() #pd.DataFrame()
-        for ititle, itype in retData.tolist():
-            # tdata2_dup = tdata2[['group_sub', 'title']][(tdata2['title'] == tfirst) | (tdata2['title'] == tsecond)].drop_duplicates()
-
-            # tData[~tData['title']==ititle]
-            # tData[~tData['title']==ititle]
-            tModifiedData = tModifiedData[~((tModifiedData['title'] == ititle) & (tModifiedData['group_sub'] == itype))]
-            # pd.merge(tModifiedData, tModifiedData2)
-            # pd.concat([tModifiedData, tModifiedData2], axis=1)
+        for ititle, ipointname, itx, ity, itz  in retData:
+            tModifiedData = tModifiedData[~((tModifiedData['title'] == ititle) & (tModifiedData['point_name'] == ipointname) & (tModifiedData['tx'] == float(itx)) & (tModifiedData['ty'] == float(ity)) & (tModifiedData['tz'] == float(itz)) )]
         print(tModifiedData)
         tData = tModifiedData
-        return retFlag, retText, tDatas
+
     print("**" * 50)
     # [title, group_sub] 데이터중에 중복된 데이터 삭제
     df3 = tData[['group_sub', 'title']].drop_duplicates()
