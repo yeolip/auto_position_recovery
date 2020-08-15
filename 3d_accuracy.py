@@ -950,6 +950,9 @@ def load_DPA_file(fname):
 
 def save_DPA_file(tdata, fname):
     print("//////////", funcname(), "//////////")
+    if(tdata == ""):
+        print("내용이 존재하지 않습니다.")
+        return
     if(tdata.group_sub.any()):
         tdata = tdata.drop(['group_sub'], axis=1)
         print("is group_sub")
@@ -1215,7 +1218,105 @@ def digit_length(n):
         ans += 1
     return ans
 
-def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
+def check_available_regid_transform(tfirst, tsecond, tfirst_rest):
+    checkOK = True
+    if (len(tfirst_rest) == 0):
+        checkOK = False
+    if(len(tfirst) != len(tsecond)):
+        checkOK = False
+        
+        #두 인풋의 갯수가 다를때, 같은 것이 있는지 체크
+        # tfirst['point_name'] == tsecond['point_name']
+        # tModifiedFirst = tfirst[tfirst['point_name'] == tsecond['point_name']]
+        # print(tModifiedFirst)
+    tleft = np.asmatrix(tfirst[['tx','ty','tz']])
+    tright = np.asmatrix(tsecond[['tx','ty','tz']])
+    return checkOK, tleft, tright
+
+def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    tdebug = 1
+    print("update_position_using_relative_2title", ttype, tfirst, tsecond)
+    tdata2 = tdatas.copy()
+
+    # tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ])
+    tdata_first_type2 = tdata2[['point_name','tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ]
+    tdata_first_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+
+    # tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|")) ])
+    tdata_second_type2 = tdata2[['point_name','tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|")) ]
+    tdata_second_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    #first type과 second type의 갯수가 같은지 보고,
+    # 다르면, 같은 것과 다른것을 구분한다.
+    # 구분뒤에 다른것을 복원하여, tdata2에 업데이트 한다.
+    #마지막으로 tdata_first_type과 tdata_second_type을 복원한다
+    tdata_type_first_dup = tdata_first_type2[(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_second_dup = tdata_second_type2[(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_first_rest = tdata_first_type2[~(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ]
+    tdata_type_second_rest = tdata_second_type2[~(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ]
+
+    # if(len(tdata_type_first_rest) > 0 ):
+    #
+    # if(len(tdata_type_second_rest) > 0 ):
+
+    if (tdebug):
+        print('first  type',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|"))])
+        print('second rest',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|"))])
+        print('first  rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+        print('second rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    #first available여부 파악
+    ret1, tdata_first_type, tdata_second_type  = check_available_regid_transform(tdata_type_first_dup, tdata_type_second_dup, tdata_first_without_type)
+    if(ret1 == True):
+        update_tdata_based_on_second, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_first_type, tdata_second_type, tdata_first_without_type)
+        if (tdebug):
+            print('First to Second =>\ntT(mm)', *tT_1_to_2, 'tR33', *tR_1_to_2, 'R31(deg)',
+                  cv2.Rodrigues(tR_1_to_2)[0] * radianToDegree, sep='\n')
+        tdata_first_without_type =  tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)].reset_index(drop=True)
+
+        tdata_first_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_second, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        tdata_first_without_type['title'] = tsecond
+        tdata_first_without_type['number'] = tdata_first_without_type.apply(lambda x: ( x['number'] + 10000* x['group_first']) if x['number']< 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis = 1)
+        if (tdebug):
+            print(tdata_first_without_type)
+        #중복데이터 제거
+        tdata_first_without_type = check_duplicate(tdata2, tdata_first_without_type)
+
+        tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
+
+    #second 연산전 available여부 파악
+    ret2, tdata_second_type, tdata_first_type = check_available_regid_transform(tdata_type_second_dup, tdata_type_first_dup, tdata_second_without_type)
+    if(ret2 == True):
+        update_tdata_based_on_first, tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_second_type, tdata_first_type, tdata_second_without_type)
+        if (tdebug):
+            print('Second to First =>\ntT(mm)', *tT_2_to_1,'tR33', *tR_2_to_1,'R31(deg)', cv2.Rodrigues(tR_2_to_1)[0] * radianToDegree, sep='\n')
+        tdata_second_without_type = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].reset_index(drop=True)
+
+        tdata_second_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_first, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        tdata_second_without_type['title'] = tfirst
+        tdata_second_without_type['number'] = tdata_second_without_type.apply(lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']),  axis=1)
+        if (tdebug):
+            print(tdata_second_without_type)
+
+        #중복데이터 제거
+        tdata_second_without_type = check_duplicate(tdata2, tdata_second_without_type)
+
+        tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">" + ttype +' '+ tdata_second_without_type['group_first'].astype(str)
+
+    if (ret1 == True):
+        tdata2 = pd.concat([tdata2, tdata_first_without_type])
+    if (ret2 == True):
+        tdata2 = pd.concat([tdata2, tdata_second_without_type])
+
+    tdata2 = tdata2.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
+    tdata2['group_first'] = tdata2.groupby('title').grouper.group_info[0] + 1
+    tdata2 = tdata2.reset_index(drop=True)
+    if (tdebug):
+        print(tdata2)
+    return tdata2
+
+def update_position_using_relative_2title_backup(ttype, tfirst, tsecond, tdata):
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 1
     print("update_position_using_relative_2title", ttype, tfirst, tsecond)
@@ -1290,7 +1391,6 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdata):
     if (tdebug):
         print(tdata)
     return tdata
-
 
 def auto_recovery_3d_points_on_each_of_coordinate(tDatas):
     print("//////////",funcname(),"//////////")
@@ -1868,11 +1968,11 @@ def preprocess(tDatas):
 
     return df5_list, tData_grp, tData_grp2, tvalidData
 
-def extract_dup_type_between_titles(tfirst, tsecond, tdata , inputlist=[]):
+def extract_dup_type_between_titles(tfirst, tsecond, tdatas , inputlist=[]):
     print("//////////",funcname(),"//////////")
     tdebug = 1
     print("extract_dup_type_between_titles", tfirst, tsecond, 'inputlist=',inputlist)
-    tdata2 = tdata.copy()
+    tdata2 = tdatas.copy()
     ret = False
     retType = ""
 
@@ -2409,10 +2509,15 @@ class mainMenu_GUI():
         self.menu_load(autoLoad=1)
 
     def event_onMouseWheel(self, event):
-        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        self.canvas2.yview_scroll(int(-1*(event.delta/120)), "units")
-        self.canvas3.yview_scroll(int(-1*(event.delta/120)), "units")
-        self.canvas4.yview_scroll(int(-1*(event.delta/120)), "units")
+        tabIdx = self.mframeIdx
+        if(tabIdx == 0):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        elif(tabIdx == 1):
+            self.canvas2.yview_scroll(int(-1*(event.delta/120)), "units")
+        elif (tabIdx == 2):
+            self.canvas3.yview_scroll(int(-1*(event.delta/120)), "units")
+        elif (tabIdx == 3):
+            self.canvas4.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def dynamic_checkBox(self, button_dict, idx, tText=""):
         self.button_dict = button_dict
@@ -2450,16 +2555,17 @@ class mainMenu_GUI():
 
     def running_result(self):
         # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
-        ret, retData, self.tresult = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
+        ret, retData, result = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
         if(ret == False):
             print(retData)
+            return
+        self.tresult = result
 
     def menu_load(self, autoLoad=0):
         if(autoLoad == 0):
             self.menu_new() #초기화
             self.filename = filedialog.askopenfilename(initialdir='./', title='Select file',
                                                   filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
-
 
         if self.filename:
             try:
