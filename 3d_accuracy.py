@@ -32,6 +32,8 @@ C_TAB2 = 1
 C_TAB3 = 2
 C_TAB4 = 3
 
+C_MIN_VALUE_RIGID_CALC = 3
+
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
 
@@ -1224,7 +1226,8 @@ def check_available_regid_transform(tfirst, tsecond, tfirst_rest):
         checkOK = False
     if(len(tfirst) != len(tsecond)):
         checkOK = False
-        
+    if (len(tfirst) < C_MIN_VALUE_RIGID_CALC or len(tsecond) < C_MIN_VALUE_RIGID_CALC):
+        checkOK = False
         #두 인풋의 갯수가 다를때, 같은 것이 있는지 체크
         # tfirst['point_name'] == tsecond['point_name']
         # tModifiedFirst = tfirst[tfirst['point_name'] == tsecond['point_name']]
@@ -1251,23 +1254,58 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
     # 다르면, 같은 것과 다른것을 구분한다.
     # 구분뒤에 다른것을 복원하여, tdata2에 업데이트 한다.
     #마지막으로 tdata_first_type과 tdata_second_type을 복원한다
-    tdata_type_first_dup = tdata_first_type2[(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
-    tdata_type_second_dup = tdata_second_type2[(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
-    tdata_type_first_rest = tdata_first_type2[~(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ]
-    tdata_type_second_rest = tdata_second_type2[~(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ]
+    tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_first_rest2 = tdata_first_type2[~(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_second_rest2 = tdata_second_type2[~(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
 
-    # if(len(tdata_type_first_rest) > 0 ):
-    #
-    # if(len(tdata_type_second_rest) > 0 ):
+    tdata_type_first_dup = np.asmatrix(tdata_type_first_dup2[['tx', 'ty', 'tz']])
+    tdata_type_second_dup = np.asmatrix(tdata_type_second_dup2[['tx', 'ty', 'tz']])
+    tdata_type_first_rest = np.asmatrix(tdata_type_first_rest2[['tx', 'ty', 'tz']])
+    tdata_type_second_rest = np.asmatrix(tdata_type_second_rest2[['tx', 'ty', 'tz']])
+
+    if(len(tdata_type_first_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_type_first_dup, tdata_type_second_dup,
+                                                                              tdata_type_first_rest)
+        update_type_rest = tdata2[((tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+        # update_type_rest = tdata2[(tdata2['group_sub'] == ttype) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        update_type_rest['title'] = tsecond
+        update_type_rest['number'] = update_type_rest.apply(
+            lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (
+                    x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + ttype + ' ' + update_type_rest[
+            'group_first'].astype(str) + ")"
+        if (tdebug):
+            print('recovery small point in type', update_type_rest)
+        tdata2 = pd.concat([tdata2, update_type_rest])
+
+    if(len(tdata_type_second_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data , tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_type_second_dup, tdata_type_first_dup,
+                                                                                    tdata_type_second_rest)
+        update_type_rest = tdata2[((tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond)) & ~(tdata2['point_name'].isin(tdata_first_type2['point_name']))].reset_index(drop=True)
+        # update_type_rest = tdata2[(tdata2['group_sub'] == ttype) & ~(tdata2['point_name'].isin(tdata_first_type2['point_name']))].reset_index(drop=True)
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        update_type_rest['title'] = tfirst
+        update_type_rest['number'] = update_type_rest.apply(
+            lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (
+                        x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + ttype + ' ' + update_type_rest['group_first'].astype(str) + ")"
+        if (tdebug):
+            print('recovery small point in type', update_type_rest)
+        tdata2 = pd.concat([tdata2, update_type_rest])
+
 
     if (tdebug):
         print('first  type',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|"))])
-        print('second rest',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|"))])
+        print('second type',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|"))])
         print('first  rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
         print('second rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
 
     #first available여부 파악
-    ret1, tdata_first_type, tdata_second_type  = check_available_regid_transform(tdata_type_first_dup, tdata_type_second_dup, tdata_first_without_type)
+    ret1, tdata_first_type, tdata_second_type  = check_available_regid_transform(tdata_type_first_dup2, tdata_type_second_dup2, tdata_first_without_type)
     if(ret1 == True):
         update_tdata_based_on_second, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_first_type, tdata_second_type, tdata_first_without_type)
         if (tdebug):
@@ -1286,7 +1324,7 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
         tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
 
     #second 연산전 available여부 파악
-    ret2, tdata_second_type, tdata_first_type = check_available_regid_transform(tdata_type_second_dup, tdata_type_first_dup, tdata_second_without_type)
+    ret2, tdata_second_type, tdata_first_type = check_available_regid_transform(tdata_type_second_dup2, tdata_type_first_dup2, tdata_second_without_type)
     if(ret2 == True):
         update_tdata_based_on_first, tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_second_type, tdata_first_type, tdata_second_without_type)
         if (tdebug):
