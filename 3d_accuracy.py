@@ -31,6 +31,7 @@ C_TAB1 = 0
 C_TAB2 = 1
 C_TAB3 = 2
 C_TAB4 = 3
+C_TAB5 = 4
 
 C_MIN_VALUE_RIGID_CALC = 3
 
@@ -296,7 +297,7 @@ def callername():
 # print('*'*50)
 
 def m_ProjectUserCoor(input_point, ref):
-    print("m_ProjectUserCoor")
+    print("//////////", funcname(), "//////////")
 
     # t_mean = np.mean(ref, axis= 0);
     t_mean = np.mean((ref[0,:],ref[1,:],ref[3,:],ref[4,:]), axis=0)
@@ -336,7 +337,7 @@ def m_ProjectUserCoor(input_point, ref):
 
 
 def m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1):
-    print("m_ProjectAbsCoor")
+    print("//////////", funcname(), "//////////")
     # P_DPA_Pts = np.asmatrix([[391.139000000000, - 1399.38500000000,    706.558000000000],
     # [318.651000000000, - 1399.80100000000,    481.105000000000],
     # [183.801000000000, - 1399.43800000000,    525.289000000000],
@@ -364,7 +365,7 @@ def m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1):
 
 
 def m_ProjectDispCoor(P_Ref1_Pts, P_Ref1_Disp):
-    print("m_ProjectDispCoor")
+    print("//////////", funcname(), "//////////")
     # P_Ref1_Pts = np.asmatrix(
     # [[1261.29623616261,    239.985317917590,    51.5313160178364],
     # [1261.53702655582,    154.082122583680,    257.056595465577],
@@ -402,6 +403,7 @@ def m_ProjectDispCoor(P_Ref1_Pts, P_Ref1_Disp):
 
 
 def rigid_transform_3D(A, B):
+    print("//////////",funcname(),"//////////")
     assert len(A) == len(B)
 
     N = A.shape[0];  # total points
@@ -432,7 +434,7 @@ def rigid_transform_3D(A, B):
     return R, t
 
 def m_findTransformedPoints(P_Ref, P_Input, P_Target):
-    print("m_findTransformedPoints")
+    print("//////////",funcname(),"//////////")
     # P_Ref = np.asmatrix(
     # [[1206.58800000000, - 52.3840000000000,    845.141000000000],
     # [869.521000000000, - 44.0830000000000, - 206.674000000000],
@@ -497,6 +499,7 @@ def m_findTransformedPoints(P_Ref, P_Input, P_Target):
 
 # OK
 def m_MakeAbsAxis(P_DPA_Ref1):
+    print("//////////",funcname(),"//////////")
     # P_DPA_Ref1 = np.array([[949.852000000000, - 51.6980000000000,    731.117000000000],
     # [727.499000000000, - 53.3340000000000,    42.3240000000000],
     # [451.291000000000, - 53.0250000000000,    133.457000000000],
@@ -529,6 +532,7 @@ def m_MakeAbsAxis(P_DPA_Ref1):
     return centroid, axis
 
 def m_MakeDispAxis(P_Ref1_Disp):
+    print("//////////",funcname(),"//////////")
     centroid = np.mean(P_Ref1_Disp, axis= 0)
 
     L_C = (P_Ref1_Disp[0,:] + P_Ref1_Disp[3,:]) / 2
@@ -634,10 +638,10 @@ def relative_position_based_on_refer_point():
     # print(p550N_name[4:9]) #DISP
     # print(p550N_name[9:12]) #MANE_2_3_4
                             # MANE_2_3_4      #MANE_2_3_4            #EYE
-    p550N_Eye = m_findTransformedPoints(pMane_Eye_disp[16:19], p550N_name[9:12], pMane_Eye_disp[13:15] )
+    p550N_Eye, rr, tt = m_findTransformedPoints(pMane_Eye_disp[16:19], p550N_name[9:12], pMane_Eye_disp[13:15] )
     print('p550N_Eye\n', p550N_Eye)
                                             #DISP                #DISP            #PATTERN
-    p550N_Pattern = m_findTransformedPoints(pPattern_disp[0:5] , p550N_name[4:9], pPattern_disp[5:10] )
+    p550N_Pattern, rr, tt = m_findTransformedPoints(pPattern_disp[0:5] , p550N_name[4:9], pPattern_disp[5:10] )
     print('p550N_Pattern\n', p550N_Pattern)
 
     m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
@@ -749,17 +753,17 @@ def relative_position_based_on_many_points():
         )
     # print(m_ProjectAbsCoor(p660P,p660P))
     # print(m_ProjectAbsCoor(p550N,p550N))
-    primeP2 = m_findTransformedPoints(p660P,p550N,p660P_Full)
-    primeP = m_findTransformedPoints(p550N,p660P,p550N_Full)
+    primeP2, rr, tt = m_findTransformedPoints(p660P,p550N,p660P_Full)
+    primeP, rr, tt = m_findTransformedPoints(p550N,p660P,p550N_Full)
 
     print('\n\n')
     print('p550N_Full - primeP2', *(p550N_Full - primeP2), sep='\n')
     print('p660P_Full - primeP', *(p660P_Full - primeP), sep='\n')
     print('\n\n')
     #
-    # primeP3 = m_findTransformedPoints(p660P, p660P_base501, p660P)
+    # primeP3, rr, tt = m_findTransformedPoints(p660P, p660P_base501, p660P)
     #
-    # primeP4 = m_findTransformedPoints(p660P, p660P_base503, p660P_Full)
+    # primeP4, rr, tt = m_findTransformedPoints(p660P, p660P_base503, p660P_Full)
 
     print("기준점 계산")
     P_DPA_Pts = np.asmatrix([[391.139000000000, - 1399.38500000000,    706.558000000000],
@@ -796,8 +800,8 @@ def relative_position_based_on_many_points():
     print('Sub2', *(ret4 - ret5), sep='\n')
 
     #recovery original position
-    ret6 = m_findTransformedPoints(ret4[18:22], p660P_Full[18:22], ret4)
-    ret7 = m_findTransformedPoints(ret5[18:22], p550N_Full[18:22], ret5)
+    ret6, rr, tt = m_findTransformedPoints(ret4[18:22], p660P_Full[18:22], ret4)
+    ret7, rr, tt = m_findTransformedPoints(ret5[18:22], p550N_Full[18:22], ret5)
 
     print('ret6', *ret6, sep='\n' )
     print('ret7', *ret7, sep='\n')
@@ -897,7 +901,7 @@ def move_origin_from_refer_point():
     print('mean', *np.mean(pTest[0:5], axis = 0), sep='\n')
     print('point - mean\n', *(pTest - np.mean(pTest[0:5], axis=0) ), sep='\n')
 
-    # ret = m_findTransformedPoints(pTest[0:5], p660P_to_origin, pTest)
+    # ret, rr, tt = m_findTransformedPoints(pTest[0:5], p660P_to_origin, pTest)
     # print('final_ret', *ret, sep='\n')
     retData, t_mean2, test_axis2 = m_ProjectUserCoor(pTest, pTest[5:10])
 
@@ -952,9 +956,9 @@ def load_DPA_file(fname):
 
 def save_DPA_file(tdata, fname):
     print("//////////", funcname(), "//////////")
-    if(tdata == ""):
-        print("내용이 존재하지 않습니다.")
-        return
+    # if(tdata == ""):
+    #     print("내용이 존재하지 않습니다.")
+    #     return
     if(tdata.group_sub.any()):
         tdata = tdata.drop(['group_sub'], axis=1)
         print("is group_sub")
@@ -1657,7 +1661,7 @@ def auto_recovery_3d_points_on_each_of_coordinate(tDatas):
     #     [169.7624,    -0.2780,   174.7639]]
     #     )
 
-    rrrrr = m_findTransformedPoints(aaaa,bbbb,aaaa)
+    rrrrr, rr, tt = m_findTransformedPoints(aaaa,bbbb,aaaa)
     print('rrrrr\n', rrrrr)
     tR, tT = rigid_transform_3D(aaaa, bbbb)
 
@@ -1770,10 +1774,10 @@ def check_face_pos_GT_based_on_MRA2_CAD_displaycenter(): #미완성
     # print(p550N_name[4:9]) #DISP
     # print(p550N_name[9:12]) #MANE_2_3_4
                             # MANE_2_3_4      #MANE_2_3_4            #EYE
-    p550N_Eye = m_findTransformedPoints(pMane_Eye_disp[16:19], p550N_name[9:12], pMane_Eye_disp[13:15] )
+    p550N_Eye, rr, tt = m_findTransformedPoints(pMane_Eye_disp[16:19], p550N_name[9:12], pMane_Eye_disp[13:15] )
     print('p550N_Eye\n', p550N_Eye)
                                             #DISP                #DISP            #PATTERN
-    p550N_Pattern = m_findTransformedPoints(pPattern_disp[0:5] , p550N_name[4:9], pPattern_disp[5:10] )
+    p550N_Pattern, rr, tt = m_findTransformedPoints(pPattern_disp[0:5] , p550N_name[4:9], pPattern_disp[5:10] )
     print('p550N_Pattern\n', p550N_Pattern)
 
     p550N_merge = np.concatenate((p550N_name, p550N_Pattern, p550N_Eye, np.mean(p550N_Eye, axis=0) ))
@@ -1910,7 +1914,7 @@ def test():
 
     print("동일한 세트에서 하나의 켈을 기준으로 R,T값을 추출함")
     print("mst_739106_03_NG 기준")
-    # rrrrr = m_findTransformedPoints(mst_739106_03_NG[0:5],mst_739106_02_NG[0:5],mst_739106_03_NG)
+    # rrrrr, rr, tt= m_findTransformedPoints(mst_739106_03_NG[0:5],mst_739106_02_NG[0:5],mst_739106_03_NG)
     tR, tT = rigid_transform_3D(mst_739106_03_NG, mst_739106_02_NG)
     print('tR33', *tR, 'tT(mm)', *tT, sep='\n')
     print('R31(deg)', cv2.Rodrigues(tR)[0] * radianToDegree)
@@ -2105,6 +2109,17 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         print(tdictData)
         print(tdicDataValue)
         retData = tdicDataValue
+    elif(tIdx == C_TAB5):
+        if(nCnt != 1):
+            retData = "1개만 선택해야합니다!!"
+            print(retData)
+            return False, tIdx, dictData, retData
+
+        for key, value in dictData.items():
+            if value.get():
+                tdictData.append(key.split('\t')[0])
+        print(tdictData)
+        retData = tdictData
 
     return nRet, tIdx, dictData, retData
 
@@ -2141,12 +2156,15 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
         print(tModifiedData)
         tData = tModifiedData
     elif(tIdx == C_TAB4):
-        print("Tab4")
         tModifiedData = tData.copy() #pd.DataFrame()
         for ititle, ipointname, itx, ity, itz  in retData:
             tModifiedData = tModifiedData[~((tModifiedData['title'] == ititle) & (tModifiedData['point_name'] == ipointname) & (tModifiedData['tx'] == float(itx)) & (tModifiedData['ty'] == float(ity)) & (tModifiedData['tz'] == float(itz)) )]
         print(tModifiedData)
         tData = tModifiedData
+    elif(tIdx == C_TAB5):
+        print("Tab5")
+        tType = retData
+        return retFlag, tType, tData
 
     print("**" * 50)
     # [title, group_sub] 데이터중에 중복된 데이터 삭제
@@ -2262,6 +2280,44 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
 
     print("\nRRRRRRRRRRRRRR")
     return retFlag, retText, tvalidData
+
+def calc_relative_position_on_base_type(tBaseType, rData):
+    ttitles = np.asmatrix(rData['title'].drop_duplicates().reset_index(drop=True)).T.tolist()
+    print(ttitles)
+    # print(ttitles.shape)
+    for ititle in ttitles:
+        print(ititle[0])
+        # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
+        tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])].reset_index(drop=True)
+
+        # tdata_without_baseType = rData[['point_name','tx', 'ty', 'tz']][(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
+        # tdata_without_baseType = rData[(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
+        tdata_all = rData[(rData['title'] == ititle[0])].reset_index(drop=True)
+
+        if(len(tdata_baseType)>0):
+            print('tdata_baseType', tdata_baseType)
+            # print('tdata_without_baseType', tdata_without_baseType)
+            print('tdata_all', tdata_all)
+            tBase = np.asmatrix(tdata_baseType[['tx', 'ty', 'tz']])
+            tTarget = np.asmatrix(tdata_all[['tx', 'ty', 'tz']])
+            print('tBase',tBase)
+            print('tTarget',tTarget)
+            # m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
+            # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
+            retRelativePos, rr, tt = m_ProjectDispCoor(tTarget, tBase)
+            print("\n")
+            print(np.round(retRelativePos,4))
+            tdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+
+            print("\n")
+            print('tdata_all', tdata_all)
+
+    # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
+    # print('\ndf\n',df)
+
+    return True, ""
+
+
 
 count = 0
 
@@ -2486,6 +2542,8 @@ class mainMenu_GUI():
             self.mframe[5].destroy()
             self.mframe[6].destroy()
             self.mframe[7].destroy()
+            self.mframe[8].destroy()
+            self.mframe[9].destroy()
 
         frame1 = tk.Frame(self.root)
         self.notebook.add(frame1, text="Method_One")
@@ -2532,7 +2590,18 @@ class mainMenu_GUI():
         self.canvas4.create_window(C_MENU_POS_X + 180, 30, window=frameFour, anchor="n")
         self.canvas4.bind_all('<MouseWheel>', self.event_onMouseWheel)
 
-        self.mframe = [frameOne, frameTwo, frameThree, frameFour, frame1, frame2, frame3, frame4]
+        frame5 = tk.Frame(self.root)
+        self.notebook.add(frame5, text="Method_Five")
+        self.canvas5 = tk.Canvas(frame5, width=360, height=800, bg='white')
+        scroll5 = tk.Scrollbar(frame5, command=self.canvas5.yview)
+        self.canvas5.config(yscrollcommand=scroll5.set, scrollregion=self.canvas5.bbox("all"))
+        self.canvas5.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        scroll5.pack(side=tk.RIGHT, fill=tk.Y)
+        frameFive = tk.Frame(self.canvas5, width=350, height=700, bg="white")
+        self.canvas5.create_window(C_MENU_POS_X+200, 30, window=frameFive, anchor="n")
+        self.canvas5.bind_all('<MouseWheel>', self.event_onMouseWheel)
+
+        self.mframe = [frameOne, frameTwo, frameThree, frameFour, frameFive, frame1, frame2, frame3, frame4, frame5]
 
         self.notebook.select(self.mframeIdx)
         self.root.config(menu=self.menubar)
@@ -2540,6 +2609,7 @@ class mainMenu_GUI():
         self.button_dict = {}
         self.filename = ""
         self.tresult = ""
+        self.tresult_base_pos = ""
 
     def event_selectTab(self, event):
         # print(event.widget.index("current"))
@@ -2548,14 +2618,16 @@ class mainMenu_GUI():
 
     def event_onMouseWheel(self, event):
         tabIdx = self.mframeIdx
-        if(tabIdx == 0):
+        if(tabIdx == C_TAB1):
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        elif(tabIdx == 1):
+        elif(tabIdx == C_TAB2):
             self.canvas2.yview_scroll(int(-1*(event.delta/120)), "units")
-        elif (tabIdx == 2):
+        elif (tabIdx == C_TAB3):
             self.canvas3.yview_scroll(int(-1*(event.delta/120)), "units")
-        elif (tabIdx == 3):
+        elif (tabIdx == C_TAB4):
             self.canvas4.yview_scroll(int(-1*(event.delta/120)), "units")
+        elif (tabIdx == C_TAB5):
+            self.canvas5.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def dynamic_checkBox(self, button_dict, idx, tText=""):
         self.button_dict = button_dict
@@ -2592,12 +2664,23 @@ class mainMenu_GUI():
         print("")
 
     def running_result(self):
+        # if(self.mframeIdx == C_TAB5):
+        #     print("C_TAB5가 눌렸습니다.")
+        #     return
         # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
-        ret, retData, result = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
+        ret, retData, resultData = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
         if(ret == False):
             print(retData)
             return
-        self.tresult = result
+        if(self.mframeIdx == C_TAB1 or self.mframeIdx == C_TAB2 or self.mframeIdx == C_TAB3 or self.mframeIdx == C_TAB4):
+            print("계산이 완료되었습니다.")
+            self.tresult = resultData
+        elif(self.mframeIdx == C_TAB5):
+            print("C_TAB5가 눌렸습니다.")
+            tType = retData
+            ret, result = calc_relative_position_on_base_type(tType, resultData)
+            if (ret == True):
+                self.tresult_base_pos = result
 
     def menu_load(self, autoLoad=0):
         if(autoLoad == 0):
@@ -2630,14 +2713,16 @@ class mainMenu_GUI():
             # print("old_tdic_mix4", old_tdic_mix4)
 
             #키는 중복될수 있어, Value로 데이터를 보내려함
-            if(self.mframeIdx == 0):
+            if(self.mframeIdx == C_TAB1):
                 self.dynamic_checkBox(old_tdic_mix, self.mframeIdx, '계산시 기준으로 설정할 포인트 그룹을 선택하세요 |중복개수')
-            elif(self.mframeIdx == 1):
+            elif(self.mframeIdx == C_TAB2):
                 self.dynamic_checkBox(swap_tdic_mix2, self.mframeIdx, '계산시 기준으로 설정할 포인트 그룹을 선택하세요 |프로젝트명')
-            elif(self.mframeIdx == 2):
+            elif(self.mframeIdx == C_TAB3):
                 self.dynamic_checkBox(swap_tdic_mix2, self.mframeIdx, '계산시 삭제할 포인트 그룹을 선택하세요 |프로젝트명')
-            elif(self.mframeIdx == 3):
+            elif(self.mframeIdx == C_TAB4):
                 self.dynamic_checkBox(swap_tdic_mix4, self.mframeIdx, '계산시 삭제할 점들을 선택하세요 |프로젝트명|포인트그룹|좌표')
+            elif (self.mframeIdx == C_TAB5):
+                self.dynamic_checkBox(old_tdic_mix, self.mframeIdx, '기준과 나머지 그룹의 거리를 추출하려합니다. 기준을 선택하세요 |중복개수')
             return
 
     def menu_save(self):
@@ -2673,9 +2758,11 @@ gui = mainMenu_GUI()
 # gui.dynamic_checkBox(button_dict)
 gui.main()
 # display_mainview()
+# print(1/0)
+
+relative_position_based_on_refer_point()
 print(1/0)
 
-# relative_position_based_on_refer_point()
 # relative_position_based_on_many_points()
 # move_origin_from_refer_point()
 # tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
