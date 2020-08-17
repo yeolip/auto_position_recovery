@@ -1182,6 +1182,57 @@ def compare_between_title(tfirst, tcomp):
 
 #중복데이터 제거 (argument1, argument2) / return argument2.drop.duplicate
 def check_duplicate(tdata_one, tdata_two):
+    tdebug = 0
+    # ttext = 'DEL'
+    print("check_duplicate")
+    tdata_copy = tdata_two.copy()
+    for i, ttwo in tdata_copy.iterrows():
+        # if (tdebug):
+        #   print('i tx,ty,tz', i, tone['tx'], tone['ty'], tone['tz'])
+        for j, tone in tdata_one.iterrows():
+            if((tone['title'] != ttwo['title']) or(tone['group_sub'] != ttwo['group_sub'])):
+                continue
+            # if (tdebug):
+            #     print('j tx,ty,tz', j, ttwo['tx'], ttwo['ty'], ttwo['tz'])
+            if(tone['tx'] == ttwo['tx'] and tone['ty'] == ttwo['ty'] and tone['tz'] == ttwo['tz']):
+                tdata_copy = tdata_copy.drop(i, axis=0)
+                # tdata_copy['point_name'][j] = 'DEL'
+            elif( abs(tone['tx'] - ttwo['tx']) <= 1 and abs(tone['ty'] - ttwo['ty']) <= 1 and abs(tone['tz'] - ttwo['tz']) <= 1 ):
+                tdata_copy = tdata_copy.drop(i, axis=0)
+                # tdata_copy['point_name'][j] = 'DEL'
+            #중복이되는 title과 point_name이면, point_name뒤에 group_first number를 넣자
+            # elif((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+            #     tdata_copy['point_name'][j] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+            if((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+                # tdata_copy['point_name'][k] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+                # tdata_copy['point_name'][j] = tdata_copy['point_name'][j] + "|" + str(ttwo['group_first'][j])
+                # ttwo[['point_name'][i]] = str(ttwo['point_name'][i]) + "|" + str(ttwo['group_first'][i])
+                # ttwo[['point_name']] = "{:s}|{:d}".format(ttwo['point_name'],ttwo['group_first'])
+                # tdata_copy[['point_name'][i]] = "{:s}|{:d}".format(ttwo['point_name'],ttwo['group_first'])
+                tdata_copy['point_name'][i] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+                    # "{:s}|{:d}".format(tdata_copy[['point_name'][i]],tdata_copy[['group_first'][i]])
+
+                # print(".....",ttwo)
+    # tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
+    # tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">" + ttype +' '+ tdata_second_without_type['group_first'].astype(str)
+
+
+    # for i, tone in tdata_one.iterrows():
+    #     for k, ttwo in tdata_copy.iterrows():
+    #         if ((tone['title'] != ttwo['title']) or (tone['group_sub'] != ttwo['group_sub'])):
+    #             continue
+    #         if((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+    #             tdata_copy['point_name'][k] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
+                # tdata_copy['point_name'][k] = "DEL"
+
+    # tdata_copy = tdata_copy[~tdata_copy['point_name'].str.contains('DEL')].reset_index(drop=True)
+    tdata_copy = tdata_copy.reset_index(drop=True)
+    if (tdebug):
+        print('tdata_two',tdata_two)
+        print('tdata_copy',tdata_copy)
+    return tdata_copy
+
+def check_duplicate_backup(tdata_one, tdata_two):
     tdebug = 1
     # ttext = 'DEL'
     print("check_duplicate")
