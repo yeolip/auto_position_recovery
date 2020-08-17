@@ -34,6 +34,7 @@ C_TAB4 = 3
 C_TAB5 = 4
 
 C_MIN_VALUE_RIGID_CALC = 3
+C_PRINT_ENABLE = 0
 
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
@@ -332,7 +333,9 @@ def m_ProjectUserCoor(input_point, ref):
     # print(cv2.Rodrigues(cv2.Rodrigues(t_axis)[0]) )
     # output_point = (input_point - np.tile(t_mean, (input_point.shape[0],1))) * t_axis
     output_point = (input_point - np.tile(t_mean, (input_point.shape[0],1))) * t_axis
-    print('ret',*output_point, sep='\n')
+
+    if (C_PRINT_ENABLE):
+        print('ret',*output_point, sep='\n')
     return output_point, t_mean, t_axis
 
 
@@ -353,7 +356,8 @@ def m_ProjectAbsCoor(P_DPA_Pts, P_DPA_Ref1):
     # print(P_DPA_Pts, np.tile(Centroid, (P_DPA_Pts.shape[0],1)),'\n',Axis )
     P_Ref1_Pts = (P_DPA_Pts - np.tile(Centroid, (P_DPA_Pts.shape[0],1))) * Axis
 
-    print('ret',*P_Ref1_Pts, sep='\n')
+    if (C_PRINT_ENABLE):
+        print('ret',*P_Ref1_Pts, sep='\n')
     # P_Ref1_Pts =
     # 1347.73296211896    404.477604521447 - 5.85905452814663
     # 1347.61341605657    311.995327466233    212.156432418129
@@ -398,7 +402,8 @@ def m_ProjectDispCoor(P_Ref1_Pts, P_Ref1_Disp):
     # )
     P_Disp = (P_Ref1_Pts - np.tile(Centroid, (P_Ref1_Pts.shape[0],1))) * Axis
 
-    print('ret',P_Disp)
+    if (C_PRINT_ENABLE):
+        print('ret',P_Disp)
     return P_Disp, Centroid, Axis
 
 
@@ -483,7 +488,8 @@ def m_findTransformedPoints(P_Ref, P_Input, P_Target):
         # P_Transformed[1] = (R * P_Target[1].T + T.T )
         # P_Transformed[2] = (R * P_Target[2].T + T.T )
 
-        print('ret', *P_Transformed, sep='\n')
+        if(C_PRINT_ENABLE):
+            print('ret', *P_Transformed, sep='\n')
         # print('ret', P_Transformed)
         # P_Transformed =
         # 535.439643764020, - 51.8884288910241,  63.5738272867725
@@ -491,11 +497,6 @@ def m_findTransformedPoints(P_Ref, P_Input, P_Target):
         # 792.075892677580, - 46.8164625429134, - 671.160246228224
         # 293.693512131688, - 51.1847826907368, - 145.560518603204
     return P_Transformed, R, T
-
-
-
-
-
 
 # OK
 def m_MakeAbsAxis(P_DPA_Ref1):
@@ -1403,28 +1404,8 @@ def update_position_using_relative_2title_backup(ttype, tfirst, tsecond, tdata):
     tdata_first_without_type = check_duplicate(tdata, tdata_first_without_type)
     tdata_second_without_type = check_duplicate(tdata, tdata_second_without_type)
 
-    #sequence path
-    # for i, tone in tdata_first_without_type.iterrows():
-    #     # print(")))))))))", ">", ttype + str(tone.group_first))
-    #     # print("^^^^^^^^^^^",tdata_first_without_type['seq'][i], ' ***** ',tone.seq + ttype)
-    #     tone.seq = str(tone.seq) + ttype + str(tone.group_first)
-    # for i, ttwo in tdata_second_without_type.iterrows():
-    #     # print(")))))))))", ">", ttype + str(tone.group_first))
-    #     # print("^^^^^^^^^^^", tdata_first_without_type['seq'][i], ' ***** ', tone.seq + ttype)
-    #     ttwo.seq = str(ttwo.seq) + ttype + str(ttwo.group_first)
-    # print('tdata_first_without_type',tdata_first_without_type)
-    # print('tdata_second_without_type',tdata_second_without_type)
-
-        # tone['seq'] = tone['seq'] + ">" + ttype + tone['group_first'].astype("object")
-        # print('seq', tone.seq.type, tone.group_first.type)
-
     tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
-    # tdata_first_without_type['seq'] =  list(ttype) + tdata_first_without_type['group_first'].astype("object")
-    # tdata_second_without_type['seq'] = tdata_second_without_type['seq'].astype("object") + ">" + ttype + tdata_second_without_type['group_first'].astype("object")
     tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">" + ttype +' '+ tdata_second_without_type['group_first'].astype(str)
-
-    # return 1/0
-
 
     tdata = pd.concat([tdata, tdata_first_without_type, tdata_second_without_type])
     tdata = tdata.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
@@ -2010,7 +1991,7 @@ def preprocess(tDatas):
 
     return df5_list, tData_grp, tData_grp2, tvalidData
 
-def extract_dup_type_between_titles(tfirst, tsecond, tdatas , inputlist=[]):
+def extract_dup_type_between_titles(tfirst, tsecond, tdatas , inputlist, tIdx):
     print("//////////",funcname(),"//////////")
     tdebug = 1
     print("extract_dup_type_between_titles", tfirst, tsecond, 'inputlist=',inputlist)
@@ -2027,19 +2008,30 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdatas , inputlist=[]):
     tdata2_dup2 = tdata2_dup[tdata2_dup.values>1]
     print('tdata2_dup2', tdata2_dup2.count(), tdata2_dup2)
 
+    # if(tIdx == C_TAB3 or tIdx == C_TAB4):
+    #     inputlist = []
+
     if(tdata2_dup2.count().title >=1):
-        if(inputlist == []):
+        if(inputlist == [] or tIdx == C_TAB3 or tIdx == C_TAB4):
             ret = True
             retType = tdata2_dup2.index[0]
             print(ret, retType)
         else:
-            for icount, iname, icomp in inputlist:
-                for lname in tdata2_dup2.index:
-                    if(iname == lname):
-                        print("Project Check (type=%s)({%s},{%s}),({%s},{%s})"%(iname, tfirst,icomp.count(tfirst) ,tsecond, icomp.count(tsecond) ))
-                        if(int(icomp.count(tfirst))>=1 and int(icomp.count(tsecond))>=1):
+            if (tIdx == C_TAB1):
+                for icount, iname, icomp in inputlist:
+                    for lname in tdata2_dup2.index:
+                        if(iname == lname):
+                            print("Project Check (type=%s)"%(iname))
                             ret = True
                             retType = lname
+            else:
+                for icount, iname, icomp in inputlist:
+                    for lname in tdata2_dup2.index:
+                        if(iname == lname):
+                            print("Project Check (type=%s)({%s},{%s}),({%s},{%s})"%(iname, tfirst,icomp.count(tfirst) ,tsecond, icomp.count(tsecond) ))
+                            if(int(icomp.count(tfirst))>=1 and int(icomp.count(tsecond))>=1):
+                                ret = True
+                                retType = lname
 
     print("match", ret, retType)
     return ret, retType
@@ -2270,13 +2262,11 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     #combination_of_title을 모든 경우의 수로 넣지말고, 체크된 포인트그룹 커버하는 수의 조합으로 for문을 돌린다면
     for title_one, title_two in combination_of_title:
         # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
-        ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add )
+        ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add, tIdx )
         if(ret == True):
             print('\t', jtype, '->', title_one, 'vs', title_two)
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('final tvalidData',tvalidData)
-    # print('hehe', df5_list['group_sub'][df5_list_dup['title'] == title_one])
-    # extract_dup_type_between_titles('403589_DISP','770_MANE_ABS2_403589', tvalidData, tData_grp2 )
 
     print("\nRRRRRRRRRRRRRR")
     return retFlag, retText, tvalidData
@@ -2285,6 +2275,8 @@ def calc_relative_position_on_base_type(tBaseType, rData):
     ttitles = np.asmatrix(rData['title'].drop_duplicates().reset_index(drop=True)).T.tolist()
     print(ttitles)
     # print(ttitles.shape)
+    retC = False
+    retData = pd.DataFrame()
     for ititle in ttitles:
         print(ititle[0])
         # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
@@ -2305,17 +2297,15 @@ def calc_relative_position_on_base_type(tBaseType, rData):
             # m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
             # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
             retRelativePos, rr, tt = m_ProjectDispCoor(tTarget, tBase)
-            print("\n")
-            print(np.round(retRelativePos,4))
+            # print(np.round(retRelativePos,4))
             tdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
 
-            print("\n")
             print('tdata_all', tdata_all)
+            print("\n")
+            retData = pd.concat([retData, tdata_all])
+            retC = True
 
-    # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
-    # print('\ndf\n',df)
-
-    return True, ""
+    return retC, retData
 
 
 
@@ -2736,7 +2726,10 @@ class mainMenu_GUI():
                 print("Save %s" % filename)
             except:  # <- naked except is a bad idea
                 messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % filename)
-            save_DPA_file(self.tresult, filename)
+            if (self.mframeIdx == C_TAB5):
+                save_DPA_file(self.tresult_base_pos, filename)
+            else:
+                save_DPA_file(self.tresult, filename)
             return
 
     def main(self):
