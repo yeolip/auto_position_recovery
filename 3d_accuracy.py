@@ -14,7 +14,19 @@ import tkinter.ttk
 from tkinter import filedialog
 from tkinter import messagebox
 
-
+# 12 GT점
+# 548.0606, -0.9230, 202.5364,
+# 548.1446, -125.9743, 202.7360,
+# 548.1358, 123.9789, 202.4794,
+# 658.2693, -0.8927, 203.8425,
+# 658.2218, -157.4343, 204.1222,
+# 658.4669, 155.4454, 203.8754,
+# 768.5166, -0.9942, 205.2305,
+# 768.3877, -187.8320, 205.2665,
+# 768.5165, 186.0766, 205.2247,
+# 998.9362, -0.9115, 207.5076,
+# 999.4603, -223.7147, 208.0781,
+# 998.7845, 222.0334, 207.5687
 
 #Automatic virtual position recovery using relative coordinates
 
@@ -34,6 +46,7 @@ C_TAB4 = 3
 C_TAB5 = 4
 
 C_MIN_VALUE_RIGID_CALC = 3
+C_PATTERN_COUNT = 5
 C_PRINT_ENABLE = 0
 
 degreeToRadian = math.pi/180
@@ -1203,7 +1216,7 @@ def check_duplicate(tdata_one, tdata_two):
             #중복이되는 title과 point_name이면, point_name뒤에 group_first number를 넣자
             # elif((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
             #     tdata_copy['point_name'][j] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
-            if((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
+            elif((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
                 # tdata_copy['point_name'][k] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
                 # tdata_copy['point_name'][j] = tdata_copy['point_name'][j] + "|" + str(ttwo['group_first'][j])
                 # ttwo[['point_name'][i]] = str(ttwo['point_name'][i]) + "|" + str(ttwo['group_first'][i])
@@ -2007,9 +2020,12 @@ def preprocess(tDatas):
     print("\n[group_sub] 기준으로 (중복 제거) title의 분류된 label의 갯수가 2개이상인 데이터 추출\n")
     tData_grp = np.concatenate(
         (np.column_stack(df9_group_sub.index.values).T, np.column_stack(df9_group_sub.title).T), axis=1).tolist()
-    tData_grp2 = np.concatenate(
-        (np.column_stack(df9_group_sub_2_more.title).T, np.column_stack(df9_group_sub_2_more.index.values).T),
-        axis=1).tolist()
+    if(len(df9_group_sub_2_more)):
+        tData_grp2 = np.concatenate(
+            (np.column_stack(df9_group_sub_2_more.title).T, np.column_stack(df9_group_sub_2_more.index.values).T),
+            axis=1).tolist()
+    else:
+        tData_grp2 = []
 
     # print("tData_grp", tData_grp)
 
@@ -2295,26 +2311,41 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     #같은 point_name의 title을 2가지씩 추출할 조합
     combination_of_title = list(combinations(list(df7_title.index), 2))
     print('combination', combination_of_title)
-    for i, (jcount, jtype, jcomp) in enumerate(tData_grp_add):
-        # if(jtype == "MANE"):
-        #     continue
-        print(i, jcomp)
-        # print(list(combinations(jcomp, 2)))
-        tloop = list(combinations(jcomp, 2))
-        for title_one, title_two in tloop:
-            print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
-            for j, (j_title_one, j_title_two) in enumerate(combination_of_title):
-                if((j_title_one == title_one and j_title_two == title_two) or (j_title_one == title_two and j_title_two == title_one)):
-                    del combination_of_title[j]
-                    print('j', j_title_one, j_title_two)
-                    break
-            tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
-    print('combination_of_title',combination_of_title)
-    #combination_of_title을 모든 경우의 수로 넣지말고, 체크된 포인트그룹 커버하는 수의 조합으로 for문을 돌린다면
+    ttcnt = 1
+    if (1):
+        for i, (jcount, jtype, jcomp) in enumerate(tData_grp_add):
+            # if(jtype == "MANE"):
+            #     continue
+            print(i, jcomp)
+            # print(list(combinations(jcomp, 2)))
+            tloop = list(combinations(jcomp, 2))
+            for title_one, title_two in tloop:
+                print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
+                for j, (j_title_one, j_title_two) in enumerate(combination_of_title):
+                    if((j_title_one == title_one and j_title_two == title_two) or (j_title_one == title_two and j_title_two == title_one)):
+                        del combination_of_title[j]
+                        print('j', j_title_one, j_title_two)
+                        break
+                print(ttcnt, 'combination check', combination_of_title)
+                ttcnt+=1
+                tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+    else:
+        for title_one, title_two in combination_of_title:
+            # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
+            ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add, tIdx )
+            if(ret == True):
+                print('\t', jtype, '->', title_one, 'vs', title_two)
+                tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+        #combination_of_title을 모든 경우의 수로 넣지말고, 체크된 포인트그룹 커버하는 수의 조합으로 for문을 돌린다면
+        combination_of_title = list(combinations(list(df7_title.index), 2))
+
+    print('combination_of_title', combination_of_title)
     for title_one, title_two in combination_of_title:
         # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
         ret, jtype = extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add, tIdx )
         if(ret == True):
+            print(ttcnt, 'combination last')
+            ttcnt += 1
             print('\t', jtype, '->', title_one, 'vs', title_two)
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
     print('final tvalidData',tvalidData)
@@ -2331,30 +2362,35 @@ def calc_relative_position_on_base_type(tBaseType, rData):
     for ititle in ttitles:
         print(ititle[0])
         # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
-        tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])].reset_index(drop=True)
+        tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
+        tdata_baseType = tdata_baseType.sort_values(['number'], ascending=True).reset_index(drop=True)
+
+
 
         # tdata_without_baseType = rData[['point_name','tx', 'ty', 'tz']][(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
         # tdata_without_baseType = rData[(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
         tdata_all = rData[(rData['title'] == ititle[0])].reset_index(drop=True)
 
-        if(len(tdata_baseType)>0):
-            print('tdata_baseType', tdata_baseType)
-            # print('tdata_without_baseType', tdata_without_baseType)
-            print('tdata_all', tdata_all)
-            tBase = np.asmatrix(tdata_baseType[['tx', 'ty', 'tz']])
-            tTarget = np.asmatrix(tdata_all[['tx', 'ty', 'tz']])
-            print('tBase',tBase)
-            print('tTarget',tTarget)
-            # m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
-            # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
-            retRelativePos, rr, tt = m_ProjectDispCoor(tTarget, tBase)
-            # print(np.round(retRelativePos,4))
-            tdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
 
-            print('tdata_all', tdata_all)
-            print("\n")
-            retData = pd.concat([retData, tdata_all])
-            retC = True
+        if(len(tdata_baseType) >= C_PATTERN_COUNT):
+            for i in range(0, len(tdata_baseType), C_PATTERN_COUNT):
+                tempBase = tdata_baseType[i:i+C_PATTERN_COUNT].sort_values(['point_name'], ascending=True)
+                print('tdata_base', tempBase, "\n")
+                print('tdata_all', tdata_all)
+                tBase = np.asmatrix(tempBase[['tx', 'ty', 'tz']])
+                tTarget = np.asmatrix(tdata_all[['tx', 'ty', 'tz']])
+                print('tBase',tBase)
+                print('tTarget',tTarget)
+                # m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
+                # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
+                retRelativePos, rr, tt = m_ProjectDispCoor(tTarget, tBase)
+                # print(np.round(retRelativePos,4))
+                tdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+
+                print('tdata_all', tdata_all)
+                print("\n")
+                retData = pd.concat([retData, tdata_all])
+                retC = True
 
     return retC, retData
 
