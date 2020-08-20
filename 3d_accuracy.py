@@ -1306,9 +1306,9 @@ def check_available_regid_transform(tfirst, tsecond, tfirst_rest):
     return checkOK, tleft, tright
 
 def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
-    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
     tdebug = 1
-    print("update_position_using_relative_2title", ttype, tfirst, tsecond)
     tdata2 = tdatas.copy()
 
     # tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ])
@@ -2365,21 +2365,24 @@ def calc_relative_position_on_base_type(tBaseType, rData):
         tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
         tdata_baseType = tdata_baseType.sort_values(['number'], ascending=True).reset_index(drop=True)
 
-
-
-        # tdata_without_baseType = rData[['point_name','tx', 'ty', 'tz']][(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
-        # tdata_without_baseType = rData[(rData['group_sub'] != tBaseType[0]) & (rData['title'] == ititle[0])]
         tdata_all = rData[(rData['title'] == ititle[0])].reset_index(drop=True)
 
-
-        if(len(tdata_baseType) >= C_PATTERN_COUNT):
-            for i in range(0, len(tdata_baseType), C_PATTERN_COUNT):
-                tempBase = tdata_baseType[i:i+C_PATTERN_COUNT].sort_values(['point_name'], ascending=True)
+        # if(len(tdata_baseType) >= C_PATTERN_COUNT):
+        if(len(tdata_baseType) > 0):
+            # tPatternCnt = 0
+            # for jstr in tdata_baseType.point_name:
+            #     if(jstr.count("|")==0):
+            #         tPatternCnt +=1
+            tPatternCnt = pd.Series(tdata_baseType['number'] // 1000).value_counts().values[0]
+            print('tPatternCnt', tPatternCnt)
+            for i in range(0, len(tdata_baseType), tPatternCnt):
+                tempBase = tdata_baseType[i: i + tPatternCnt]
+                tempBase = tempBase.sort_values(['point_name'], ascending=True)
                 print('tdata_base', tempBase, "\n")
                 print('tdata_all', tdata_all)
                 tBase = np.asmatrix(tempBase[['tx', 'ty', 'tz']])
                 tTarget = np.asmatrix(tdata_all[['tx', 'ty', 'tz']])
-                print('tBase',tBase)
+                print('\n','tBase',tBase)
                 print('tTarget',tTarget)
                 # m_ProjectDispCoor(p550N_Eye, p550N_Pattern)
                 # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
