@@ -46,7 +46,6 @@ C_TAB4 = 3
 C_TAB5 = 4
 
 C_MIN_VALUE_RIGID_CALC = 3
-C_PATTERN_COUNT = 5
 C_PRINT_ENABLE = 0
 
 degreeToRadian = math.pi/180
@@ -1305,8 +1304,155 @@ def check_available_regid_transform(tfirst, tsecond, tfirst_rest):
     tright = np.asmatrix(tsecond[['tx','ty','tz']])
     return checkOK, tleft, tright
 
-def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
+def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
+    tdebug = 1
+    tdata2 = tdatas.copy()
+    tCnt = 0
 
+    tdata_first_type = tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) ].sort_values(['number'], ascending=True).reset_index(drop=True)
+    tdata_first_without = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)].sort_values(['number'], ascending=True).reset_index(drop=True)
+
+    tdata_second_type = tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) ].sort_values(['number'], ascending=True).reset_index(drop=True)
+    tdata_second_without = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].sort_values(['number'], ascending=True).reset_index(drop=True)
+
+    tcount1_type = pd.Series(tdata_first_type['number'] // 10000).value_counts()
+    tUnit1Cnt = pd.Series(tdata_first_type['number']//10000).value_counts().values[0]
+    tType1Cnt = len(pd.Series(tdata_first_type['number'] // 10000).value_counts())
+
+    tcount2_type = pd.Series(tdata_second_type['number'] // 10000).value_counts()
+    tUnit2Cnt = pd.Series(tdata_second_type['number']//10000).value_counts().values[0]
+    tType2Cnt = len(pd.Series(tdata_second_type['number'] // 10000).value_counts())
+
+    if(tUnit1Cnt < C_MIN_VALUE_RIGID_CALC or tUnit2Cnt < C_MIN_VALUE_RIGID_CALC):
+        print("Skip tUnitCnt are",tUnit1Cnt, tUnit2Cnt)
+        return False, tdatas
+
+    for i1 in range(0, tUnit1Cnt * tType1Cnt, tUnit1Cnt):
+        tempBase = tdata_first_type[i1: i1 + tUnit1Cnt]
+        tempBase = tempBase.sort_values(['point_name'], ascending=True)
+        print('tdata_base', tempBase, "\n")
+
+    for i2 in range(0, tUnit2Cnt * tType2Cnt , tUnit2Cnt):
+        tempBase = tdata_second_type[i2: i2 + tUnit2Cnt]
+        tempBase = tempBase.sort_values(['point_name'], ascending=True)
+        print('tdata_base', tempBase, "\n")
+
+    print("\n****************")
+    for i1 in range(0, tUnit1Cnt * tType1Cnt, tUnit1Cnt):
+        tempBase1 = tdata_first_type[i1: i1 + tUnit1Cnt]
+        tempBase1 = tempBase1.sort_values(['point_name'], ascending=True)
+        for i2 in range(0, tUnit2Cnt * tType2Cnt, tUnit2Cnt):
+            tCnt +=1
+            tempBase2 = tdata_second_type[i2: i2 + tUnit2Cnt]
+            tempBase2 = tempBase2.sort_values(['point_name'], ascending=True)
+            print('tCnt', tCnt)
+            print('tdata_base1', tempBase1, "\n")
+            print('tdata_base2', tempBase2, "\n")
+            if(tUnit1Cnt != tUnit2Cnt):
+                ret, tempBaseOne, tempBaseTwo = update_unitType_position_using_rigid(tempBase1, tempBase2)
+            else:
+                tempBaseOne = tempBase1.copy()
+                tempBaseTwo = tempBase2.copy()
+
+
+        print('\n')
+
+    # print(1/0)
+    # update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas)
+
+def update_unitType_position_using_rigid(tdata_first_type2, tdata_second_type2):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    tdebug = 1
+
+    if(len(tdata_first_type2) < C_MIN_VALUE_RIGID_CALC or len(tdata_second_type2) < C_MIN_VALUE_RIGID_CALC):
+        return False, tdata_first_type2, tdata_second_type2
+    # tdata_first_type2['point_name'].str.split('|').str[0]
+    # PATTERN_P1
+    # tdata_first_type2['point_name'].str.split('|').str[:3].str.join(sep='-')
+    #PATTERN_P1-1-3
+    # tdata_first_type2['point_name'].str.split('|').str[1:].str.join(sep='-')
+    #1-3
+
+    # tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].str.split('|').str[0].isin(tdata_second_type2['point_name'].str.split('|').str[0]))]
+    # tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].str.split('|').str[0].isin(tdata_first_type2['point_name'].str.split('|').str[0]))]
+
+    #first type과 second type의 갯수가 같은지 보고,
+    # 다르면, 같은 것과 다른것을 구분한다.
+    # 구분뒤에 다른것을 복원하여, tdata2에 업데이트 한다.
+    #마지막으로 tdata_first_type과 tdata_second_type을 복원한다
+    # tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    # tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+    # tdata_type_first_rest2 = tdata_first_type2[~(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    # tdata_type_second_rest2 = tdata_second_type2[~(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].str.split('|').str[0].isin(tdata_second_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].str.split('|').str[0].isin(tdata_first_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    tdata_type_first_rest2 = tdata_first_type2[~(tdata_first_type2['point_name'].str.split('|').str[0].isin(tdata_second_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    tdata_type_second_rest2 = tdata_second_type2[~(tdata_second_type2['point_name'].str.split('|').str[0].isin(tdata_first_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+
+    tdata_type_first_dup = np.asmatrix(tdata_type_first_dup2[['tx', 'ty', 'tz']])
+    tdata_type_second_dup = np.asmatrix(tdata_type_second_dup2[['tx', 'ty', 'tz']])
+    tdata_type_first_rest = np.asmatrix(tdata_type_first_rest2[['tx', 'ty', 'tz']])
+    tdata_type_second_rest = np.asmatrix(tdata_type_second_rest2[['tx', 'ty', 'tz']])
+
+    print("llllllllllllllllllllllllllllll")
+    print(tdata_type_first_dup, tdata_type_first_rest, '\n\n', tdata_type_second_dup, tdata_type_second_rest)
+
+    tdata_first_type3 = tdata_first_type2.copy()
+    tdata_second_type3 = tdata_second_type2.copy()
+    if(len(tdata_type_first_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_type_first_dup, tdata_type_second_dup,
+                                                                              tdata_type_first_rest)
+        update_type_rest = tdata_type_first_rest2.copy()
+                # tdata2[((tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+        # update_type_rest = tdata2[(tdata2['group_sub'] == ttype) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        # update_type_rest['title'] = tsecond
+        update_type_rest['title'] = tdata_type_second_dup2['title'][0]
+        update_type_rest['number'] = update_type_rest.apply(lambda x: (x['number'] % 10000 + (tdata_type_second_dup2['number']//10000)*10000) , axis=1)
+        # update_type_rest['number'] = update_type_rest['number'] + (tdata_type_second_dup2['number']//10000)*10000
+        if(tdata_type_second_dup2.point_name.str.split('|').str[1:].str.join(sep='|').any() != ""):
+            update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + tdata_type_second_dup2['point_name'].str.split('|').str[1:].str.join(sep='|')
+        else:
+            update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0]
+        # update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + tdata_type_second_dup2['point_name'].str.split('|').str[1:].str.join(sep='-')
+        #
+        # update_type_rest.apply(
+        #     lambda x: (x if ((x = tdata_type_second_dup2['point_name'].str.split('|').str[1:].str.join(sep='-')) == "") else ("|" + x), axis=1))
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + update_type_rest['group_first'].astype(str) + ")"
+
+        if (tdebug):
+            print('recovery small point in type second', update_type_rest)
+        tdata_first_type3 = pd.concat([tdata_first_type2, update_type_rest])
+
+    if (len(tdata_type_second_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data, tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_type_second_dup,
+                                                                              tdata_type_first_dup,
+                                                                              tdata_type_second_rest)
+        update_type_rest = tdata_type_second_rest2.copy()
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[
+            ['tx', 'ty', 'tz']]
+        update_type_rest['title'] = tdata_type_first_dup2['title'][0]
+        update_type_rest['number'] = update_type_rest.apply(lambda x: (x['number'] % 10000 +(tdata_type_first_dup2['number'] // 10000) * 10000), axis=1)
+        # update_type_rest['number'] = update_type_rest['number'] + (tdata_type_first_dup2['number'] // 10000) * 10000
+        if (tdata_type_second_dup2.point_name.str.split('|').str[1:].str.join(sep='|').any() != ""):
+            update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + \
+                                             tdata_type_first_dup2['point_name'].str.split('|').str[1:].str.join(sep='|')
+        else:
+            update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0]
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + update_type_rest['group_first'].astype(str) + ")"
+
+        if (tdebug):
+            print('recovery small point in type first', update_type_rest)
+        tdata_second_type3 = pd.concat([tdata_second_type2, update_type_rest])
+    return True, tdata_first_type3, tdata_second_type3
+
+
+def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
+    decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas)
+    return tdatas
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
     tdebug = 1
     tdata2 = tdatas.copy()
@@ -1423,7 +1569,125 @@ def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
         print(tdata2)
     return tdata2
 
-def update_position_using_relative_2title_backup(ttype, tfirst, tsecond, tdata):
+def update_position_using_relative_2title_backup1(ttype, tfirst, tsecond, tdatas):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    tdebug = 1
+    print("update_position_using_relative_2title", ttype, tfirst, tsecond)
+    tdata2 = tdatas.copy()
+
+    # tdata_first_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ])
+    tdata_first_type2 = tdata2[['point_name','tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|")) ]
+    tdata_first_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+
+    # tdata_second_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|")) ])
+    tdata_second_type2 = tdata2[['point_name','tx','ty','tz']][(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|")) ]
+    tdata_second_without_type = np.asmatrix(tdata2[['tx','ty','tz']][(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    #first type과 second type의 갯수가 같은지 보고,
+    # 다르면, 같은 것과 다른것을 구분한다.
+    # 구분뒤에 다른것을 복원하여, tdata2에 업데이트 한다.
+    #마지막으로 tdata_first_type과 tdata_second_type을 복원한다
+    tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_first_rest2 = tdata_first_type2[~(tdata_first_type2['point_name'].isin(tdata_second_type2['point_name'])) ].reset_index(drop=True)
+    tdata_type_second_rest2 = tdata_second_type2[~(tdata_second_type2['point_name'].isin(tdata_first_type2['point_name'])) ].reset_index(drop=True)
+
+    tdata_type_first_dup = np.asmatrix(tdata_type_first_dup2[['tx', 'ty', 'tz']])
+    tdata_type_second_dup = np.asmatrix(tdata_type_second_dup2[['tx', 'ty', 'tz']])
+    tdata_type_first_rest = np.asmatrix(tdata_type_first_rest2[['tx', 'ty', 'tz']])
+    tdata_type_second_rest = np.asmatrix(tdata_type_second_rest2[['tx', 'ty', 'tz']])
+
+    if(len(tdata_type_first_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_type_first_dup, tdata_type_second_dup,
+                                                                              tdata_type_first_rest)
+        update_type_rest = tdata2[((tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst)) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+        # update_type_rest = tdata2[(tdata2['group_sub'] == ttype) & ~(tdata2['point_name'].isin(tdata_second_type2['point_name']))].reset_index(drop=True)
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        update_type_rest['title'] = tsecond
+        update_type_rest['number'] = update_type_rest.apply(
+            lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (
+                    x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + ttype + ' ' + update_type_rest[
+            'group_first'].astype(str) + ")"
+        if (tdebug):
+            print('recovery small point in type', update_type_rest)
+        tdata2 = pd.concat([tdata2, update_type_rest])
+
+    if(len(tdata_type_second_rest) > 0 and len(tdata_type_first_dup) >= C_MIN_VALUE_RIGID_CALC):
+        update_type_rest_data , tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_type_second_dup, tdata_type_first_dup,
+                                                                                    tdata_type_second_rest)
+        update_type_rest = tdata2[((tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond)) & ~(tdata2['point_name'].isin(tdata_first_type2['point_name']))].reset_index(drop=True)
+        # update_type_rest = tdata2[(tdata2['group_sub'] == ttype) & ~(tdata2['point_name'].isin(tdata_first_type2['point_name']))].reset_index(drop=True)
+
+        update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        update_type_rest['title'] = tfirst
+        update_type_rest['number'] = update_type_rest.apply(
+            lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (
+                        x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
+        update_type_rest['seq'] = update_type_rest['seq'].astype(str) + "(" + ttype + ' ' + update_type_rest['group_first'].astype(str) + ")"
+        if (tdebug):
+            print('recovery small point in type', update_type_rest)
+        tdata2 = pd.concat([tdata2, update_type_rest])
+
+
+    if (tdebug):
+        print('first  type',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) & (~tdata2['point_name'].str.contains("\|"))])
+        print('second type',tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) & (~tdata2['point_name'].str.contains("\|"))])
+        print('first  rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)])
+        print('second rest',tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)])
+
+    #first available여부 파악
+    ret1, tdata_first_type, tdata_second_type  = check_available_regid_transform(tdata_type_first_dup2, tdata_type_second_dup2, tdata_first_without_type)
+    if(ret1 == True):
+        update_tdata_based_on_second, tR_1_to_2, tT_1_to_2 = m_findTransformedPoints(tdata_first_type, tdata_second_type, tdata_first_without_type)
+        if (tdebug):
+            print('First to Second =>\ntT(mm)', *tT_1_to_2, 'tR33', *tR_1_to_2, 'R31(deg)',
+                  cv2.Rodrigues(tR_1_to_2)[0] * radianToDegree, sep='\n')
+        tdata_first_without_type =  tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)].reset_index(drop=True)
+
+        tdata_first_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_second, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        tdata_first_without_type['title'] = tsecond
+        tdata_first_without_type['number'] = tdata_first_without_type.apply(lambda x: ( x['number'] + 10000* x['group_first']) if x['number']< 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis = 1)
+        if (tdebug):
+            print(tdata_first_without_type)
+        #중복데이터 제거
+        tdata_first_without_type = check_duplicate(tdata2, tdata_first_without_type)
+
+        tdata_first_without_type['seq'] = tdata_first_without_type['seq'] + ">" + ttype +' '+ tdata_first_without_type['group_first'].astype(str)
+
+    #second 연산전 available여부 파악
+    ret2, tdata_second_type, tdata_first_type = check_available_regid_transform(tdata_type_second_dup2, tdata_type_first_dup2, tdata_second_without_type)
+    if(ret2 == True):
+        update_tdata_based_on_first, tR_2_to_1, tT_2_to_1 = m_findTransformedPoints(tdata_second_type, tdata_first_type, tdata_second_without_type)
+        if (tdebug):
+            print('Second to First =>\ntT(mm)', *tT_2_to_1,'tR33', *tR_2_to_1,'R31(deg)', cv2.Rodrigues(tR_2_to_1)[0] * radianToDegree, sep='\n')
+        tdata_second_without_type = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].reset_index(drop=True)
+
+        tdata_second_without_type [['tx', 'ty', 'tz']] = pd.DataFrame(update_tdata_based_on_first, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+        tdata_second_without_type['title'] = tfirst
+        tdata_second_without_type['number'] = tdata_second_without_type.apply(lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']),  axis=1)
+        if (tdebug):
+            print(tdata_second_without_type)
+
+        #중복데이터 제거
+        tdata_second_without_type = check_duplicate(tdata2, tdata_second_without_type)
+
+        tdata_second_without_type['seq'] = tdata_second_without_type['seq'] + ">" + ttype +' '+ tdata_second_without_type['group_first'].astype(str)
+
+    if (ret1 == True):
+        tdata2 = pd.concat([tdata2, tdata_first_without_type])
+    if (ret2 == True):
+        tdata2 = pd.concat([tdata2, tdata_second_without_type])
+
+    tdata2 = tdata2.sort_values(['title', 'point_name', 'number'], ascending=(True, True, True))
+    tdata2['group_first'] = tdata2.groupby('title').grouper.group_info[0] + 1
+    tdata2 = tdata2.reset_index(drop=True)
+    if (tdebug):
+        print(tdata2)
+    return tdata2
+
+def update_position_using_relative_2title_backup2(ttype, tfirst, tsecond, tdata):
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 1
     print("update_position_using_relative_2title", ttype, tfirst, tsecond)
@@ -2163,8 +2427,8 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         for key, value in dictData.items():
             if value.get():
                 tdictData.append(key.split('\t')[0])
-                tdicDataValue.append([key.split('\t')[0],key.split('|')[1],
-                                      key.split('|')[2].split(',')[0],key.split('|')[2].split(',')[1],key.split('|')[2].split(',')[2]])
+                tdicDataValue.append([key.split('\t')[0],key.split('!')[1],
+                                      key.split('!')[2].split(',')[0],key.split('!')[2].split(',')[1],key.split('!')[2].split(',')[2]])
         print(tdictData)
         print(tdicDataValue)
         retData = tdicDataValue
@@ -2373,7 +2637,7 @@ def calc_relative_position_on_base_type(tBaseType, rData):
             # for jstr in tdata_baseType.point_name:
             #     if(jstr.count("|")==0):
             #         tPatternCnt +=1
-            tPatternCnt = pd.Series(tdata_baseType['number'] // 1000).value_counts().values[0]
+            tPatternCnt = pd.Series(tdata_baseType['number'] // 10000).value_counts().values[0]
             print('tPatternCnt', tPatternCnt)
             for i in range(0, len(tdata_baseType), tPatternCnt):
                 tempBase = tdata_baseType[i: i + tPatternCnt]
@@ -2787,7 +3051,7 @@ class mainMenu_GUI():
             old_tdic_mix2 = dict(ret_type_one.group_sub+'\t\t|'+ret_type_one.title)
             # print('old_tdic_mix3', old_tdic_mix3)
             swap_tdic_mix2 = dict([(value, key) for key, value in old_tdic_mix2.items()])
-            old_tdic_mix4 = dict(ret_type_four.title + '\t|' + ret_type_four.point_name+'|'
+            old_tdic_mix4 = dict(ret_type_four.title + '\t!' + ret_type_four.point_name+'!'
                      +ret_type_four.tx.astype(str)+','+ret_type_four.ty.astype(str)+','+ret_type_four.tz.astype(str))
             swap_tdic_mix4 = {value:key for key, value in old_tdic_mix4.items()}
             # print("old_tdic_mix4", old_tdic_mix4)
