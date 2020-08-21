@@ -1308,7 +1308,6 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
     tdebug = 1
     tdata2 = tdatas.copy()
-    tCnt = 0
 
     tdata_first_type = tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tfirst) ].sort_values(['number'], ascending=True).reset_index(drop=True)
     tdata_first_without = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tfirst)].sort_values(['number'], ascending=True).reset_index(drop=True)
@@ -1339,6 +1338,8 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
     #     print('tdata_base', tempBase, "\n")
 
     print("\n****************")
+    totalDf = pd.DataFrame()
+    tCnt = 0
     for i1 in range(0, tUnit1Cnt * tType1Cnt, tUnit1Cnt):
         tempBase1 = tdata_first_type[i1: i1 + tUnit1Cnt]
         tempBase1 = tempBase1.sort_values(['point_name'], ascending=True).reset_index(drop=True)
@@ -1357,15 +1358,27 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
             #     tempBaseOne = tempBase1.copy()
             #     tempBaseTwo = tempBase2.copy()
             ret, tempBaseOne, tempBaseTwo = update_unitType_position_using_rigid(tempBase1, tempBase2)
-            if(ret == True):
-                ret2, tempBaseOneRest, tempBaseTwoRest = update_OtherType_position_using_rigid(ttype, tempBaseOne, tempBaseTwo, tdata_first_without, tdata_second_without)
-
+            # if(ret == True):
+            ret2, tempBaseOneRest, tempBaseTwoRest = update_OtherType_position_using_rigid(ttype, tempBaseOne, tempBaseTwo, tdata_first_without, tdata_second_without, tCnt)
+            totalDf = pd.concat([totalDf, tempBaseOne, tempBaseTwo, tempBaseOneRest, tempBaseTwoRest,])
 
         print('\n')
 
+    totalDf['type_idx'] = totalDf.point_name.str.split('|').str[1:].str.join(sep='|')
+    totalDf = totalDf.sort_values(['title','type_idx', 'point_name'], ascending=True)
+    # totalDf = totalDf.duplicated(['point_name'], keep='first')
+    totalDf = totalDf.drop_duplicates(['title','point_name'], keep='first').reset_index(drop=True)
+    # df3 = tData[['group_sub', 'title']].drop_duplicates()
+    # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
+    del(totalDf['type_idx'])
+
+    totalDf[['group_first']] = totalDf.groupby('title').grouper.group_info[0] + 1
+
+    print('totalDf', totalDf)
+    return totalDf
     # print(1/0)
     # update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas)
-def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, trest_second):
+def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, trest_second, tCount):
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 1
 
@@ -1404,7 +1417,7 @@ def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, t
         # update_type_rest['title'] = tsecond
         update_type_rest['title'] = tdata_type_second_dup2['title'][0]
         update_type_rest['number'] = update_type_rest.apply(lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
-        update_type_rest['seq'] = update_type_rest['seq'] + ">" + ttype + ' ' + update_type_rest['group_first'].astype(str)
+        update_type_rest['seq'] = update_type_rest['seq'] + ">" + ttype + ' ' + update_type_rest['group_first'].astype(str) +"_" + str(tCount)
 
         # if(tdata_type_second_dup2.point_name.str.split('|').str[1:].str.join(sep='|').any() != ""):
         #     # update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + tdata_type_second_dup2['point_name'].str.split('|').str[1:].str.join(sep='|')
@@ -1412,7 +1425,7 @@ def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, t
         # else:
         #     # update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0]
         #     update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + update_type_rest['group_first'].astype(str)
-        update_type_rest['point_name'] = update_type_rest['point_name'] + '|' + update_type_rest['group_first'].astype(str)
+        update_type_rest['point_name'] = update_type_rest['point_name'] + '|' + update_type_rest['group_first'].astype(str) +"_" + str(tCount)
 
         # 중복데이터 제거
         # tdata_first_without_type = check_duplicate(tdata2, tdata_first_without_type)
@@ -1430,14 +1443,14 @@ def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, t
         update_type_rest[['tx', 'ty', 'tz']] = pd.DataFrame(update_type_rest_data, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
         update_type_rest['title'] = tdata_type_first_dup2['title'][0]
         update_type_rest['number'] = update_type_rest.apply(lambda x: (x['number'] + 10000 * x['group_first']) if x['number'] < 9999 else (x['number'] + (10 ** (digit_length(x['number']))) * x['group_first']), axis=1)
-        update_type_rest['seq'] = update_type_rest['seq'] + ">" + ttype + ' ' + update_type_rest['group_first'].astype(str)
+        update_type_rest['seq'] = update_type_rest['seq'] + ">" + ttype + ' ' + update_type_rest['group_first'].astype(str) +"_" + str(tCount)
         # if (tdata_type_first_dup2.point_name.str.split('|').str[1:].str.join(sep='|').any() != ""):
         #     # update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + tdata_type_first_dup2['point_name'].str.split('|').str[1:].str.join(sep='|')
         #     update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + tdata_type_first_dup2['point_name'].str.split('|').str[1:].str.join(sep='|') + '|' + update_type_rest['group_first'].astype(str)
         # else:
         #     # update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0]
         #     update_type_rest['point_name'] = update_type_rest['point_name'].str.split('|').str[0] + '|' + update_type_rest['group_first'].astype(str)
-        update_type_rest['point_name'] = update_type_rest['point_name'] + '|' + update_type_rest['group_first'].astype(str)
+        update_type_rest['point_name'] = update_type_rest['point_name'] + '|' + update_type_rest['group_first'].astype(str) +"_" + str(tCount)
 
         # 중복데이터 제거
         # tdata_first_without_type = check_duplicate(tdata2, tdata_first_without_type)
