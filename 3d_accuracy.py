@@ -45,6 +45,7 @@ C_TAB3 = 2
 C_TAB4 = 3
 C_TAB5 = 4
 
+C_MAX_GAP = 2       # 중복좌표 체크 범위 (단위 mm)
 C_MIN_VALUE_RIGID_CALC = 3
 C_PRINT_ENABLE = 0
 
@@ -1159,8 +1160,8 @@ def auto_recovery_3d_points_on_each_of_coordinate_predebug(tData):
 
 #첫번째 DataFrame에서 두번째 DataFrame을 비교하여, point_name의 값이 없는 부분을 모두 (0,0,0)으로 생성함
 def compare_between_title(tfirst, tcomp):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 0
-    print("compare_between_title")
     tfirst = tfirst.reset_index(drop=True)
     if(tdebug):
         print('tfirst',tfirst)
@@ -1194,9 +1195,9 @@ def compare_between_title(tfirst, tcomp):
 
 #중복데이터 제거 (argument1, argument2) / return argument2.drop.duplicate
 def check_duplicate(tdata_one, tdata_two):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 0
     # ttext = 'DEL'
-    print("check_duplicate")
     tdata_copy = tdata_two.copy()
     for i, ttwo in tdata_copy.iterrows():
         # if (tdebug):
@@ -1244,41 +1245,62 @@ def check_duplicate(tdata_one, tdata_two):
         print('tdata_copy',tdata_copy)
     return tdata_copy
 
-def check_duplicate_backup(tdata_one, tdata_two):
-    tdebug = 1
-    # ttext = 'DEL'
-    print("check_duplicate")
-    tdata_copy = tdata_two.copy()
-    for i, tone in tdata_one.iterrows():
-        # if (tdebug):
-        #   print('i tx,ty,tz', i, tone['tx'], tone['ty'], tone['tz'])
-        for j, ttwo in tdata_two.iterrows():
-            if((tone['title'] != ttwo['title']) or(tone['group_sub'] != ttwo['group_sub'])):
-                continue
-            # if (tdebug):
-            #     print('j tx,ty,tz', j, ttwo['tx'], ttwo['ty'], ttwo['tz'])
-            if(tone['tx'] == ttwo['tx'] and tone['ty'] == ttwo['ty'] and tone['tz'] == ttwo['tz']):
-                tdata_copy = tdata_copy.drop(j, axis=0)
-                # tdata_copy['point_name'][j] = 'DEL'
-            elif( abs(tone['tx'] - ttwo['tx']) <= 1 and abs(tone['ty'] - ttwo['ty']) <= 1 and abs(tone['tz'] - ttwo['tz']) <= 1 ):
-                tdata_copy = tdata_copy.drop(j, axis=0)
-                # tdata_copy['point_name'][j] = 'DEL'
-            #중복이되는 title과 point_name이면, point_name뒤에 group_first number를 넣자
-            # elif((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
-            #     tdata_copy['point_name'][j] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
-    for i, tone in tdata_one.iterrows():
-        for k, ttwo in tdata_copy.iterrows():
-            if ((tone['title'] != ttwo['title']) or (tone['group_sub'] != ttwo['group_sub'])):
-                continue
-            if((tone['title'] == ttwo['title']) and (tone['point_name'].split("|")[0] == ttwo['point_name'].split("|")[0])):
-                tdata_copy['point_name'][k] = str(ttwo['point_name']) + "|" + str(ttwo['group_first'])
-                # tdata_copy['point_name'][k] = "DEL"
+def check_duplicate_and_remove(tdatas):
+    print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
+    tdebug = 0
 
-    # tdata_copy = tdata_copy[~tdata_copy['point_name'].str.contains('DEL')].reset_index(drop=True)
+    tdata_copy = tdatas.copy()
+
+    # df_title = tdata_copy.groupby('title').count().index
+    # df_type = tdata_copy[['group_sub', 'title']].drop_duplicates()
+    # print('df_type',df_type.count())
+    # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
+    df_sort = tdata_copy.sort_values(['title', 'group_sub', 'point_name'],ascending=(True, True, True)).reset_index(drop=True)
+    df_sort['compare_group'] = df_sort['point_name'].str.split('|').str[0]
+    print('df_sort', len(df_sort), df_sort)
+
+    df_type = df_sort[['title', 'compare_group']].drop_duplicates()
+    # print('df_type',df_type)
+    # print('df_type',df_type.values)
+
+    print('checking')
+    getData = pd.DataFrame()
+    for tTitle, tGcomp in df_type.values:
+        print(tTitle, tGcomp)
+        df_temp = df_sort[(df_sort['title'] == tTitle) & (df_sort['compare_group'] == tGcomp)]
+        if (tdebug):
+            print('df_temp', df_temp)
+
+        for i, tleft in df_temp.iterrows():
+            for j, tright in df_temp.iterrows():
+                if(i == j):
+                    continue
+                if (abs(tleft['tx'] - tright['tx']) <= C_MAX_GAP and abs(tleft['ty'] - tright['ty']) <= C_MAX_GAP and abs(tleft['tz'] - tright['tz']) <= C_MAX_GAP):
+                    print('삭제', j,'번째', i)
+                    df_temp = df_temp.drop(j, axis=0)
+                    continue
+        getData = pd.concat([getData, df_temp])
+
     if (tdebug):
-        print('tdata_two',tdata_two)
-        print('tdata_copy',tdata_copy)
-    return tdata_copy
+        print('getData', len(getData), getData)
+
+    return getData
+
+
+    # df9_group_sub = tdata_copy.groupby('group_sub').count().sort_values(['title'], ascending=False)
+
+    # tdata_first_type2['point_name'].str.split('|').str[0]
+    # PATTERN_P1
+    # tdata_first_type2['point_name'].str.split('|').str[:3].str.join(sep='-')
+    #PATTERN_P1-1-3
+    # tdata_first_type2['point_name'].str.split('|').str[1:].str.join(sep='-')
+    #1-3
+
+    # tdata_type_first_dup2 = tdata_first_type2[(tdata_first_type2['point_name'].str.split('|').str[0].isin(tdata_second_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    # tdata_type_second_dup2 = tdata_second_type2[(tdata_second_type2['point_name'].str.split('|').str[0].isin(tdata_first_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    # tdata_type_first_rest2 = tdata_first_type2[~(tdata_first_type2['point_name'].str.split('|').str[0].isin(tdata_second_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+    # tdata_type_second_rest2 = tdata_second_type2[~(tdata_second_type2['point_name'].str.split('|').str[0].isin(tdata_first_type2['point_name'].str.split('|').str[0]))].reset_index(drop=True)
+
 
 #숫자 자릿수 리턴
 def digit_length(n):
@@ -1315,13 +1337,19 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
     tdata_second_type = tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) ].sort_values(['number'], ascending=True).reset_index(drop=True)
     tdata_second_without = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].sort_values(['number'], ascending=True).reset_index(drop=True)
 
-    tcount1_type = pd.Series(tdata_first_type['number'] // 10000).value_counts()
-    tUnit1Cnt = pd.Series(tdata_first_type['number']//10000).value_counts().values[0]
-    tType1Cnt = len(pd.Series(tdata_first_type['number'] // 10000).value_counts())
+    tdata_first_type['type_idx'] = tdata_first_type.point_name.str.split('|').str[1:].str.join(sep='|')
+    tdata_first_type = tdata_first_type.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+    tcount1_type = pd.Series(tdata_first_type['type_idx'] ).value_counts()
+    tUnit1Cnt = pd.Series(tdata_first_type['type_idx'] ).value_counts().values[0]
+    tType1Cnt = len(pd.Series(tdata_first_type['type_idx'] ).value_counts())
+    del(tdata_first_type['type_idx'])
 
-    tcount2_type = pd.Series(tdata_second_type['number'] // 10000).value_counts()
-    tUnit2Cnt = pd.Series(tdata_second_type['number']//10000).value_counts().values[0]
-    tType2Cnt = len(pd.Series(tdata_second_type['number'] // 10000).value_counts())
+    tdata_second_type['type_idx'] = tdata_second_type.point_name.str.split('|').str[1:].str.join(sep='|')
+    tdata_second_type = tdata_second_type.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+    tcount2_type = pd.Series(tdata_second_type['type_idx'] ).value_counts()
+    tUnit2Cnt = pd.Series(tdata_second_type['type_idx'] ).value_counts().values[0]
+    tType2Cnt = len(pd.Series(tdata_second_type['type_idx'] ).value_counts())
+    del(tdata_second_type['type_idx'])
 
     if(tUnit1Cnt < C_MIN_VALUE_RIGID_CALC or tUnit2Cnt < C_MIN_VALUE_RIGID_CALC):
         print("Skip tUnitCnt are",tUnit1Cnt, tUnit2Cnt)
@@ -1342,11 +1370,13 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
     tCnt = 0
     for i1 in range(0, tUnit1Cnt * tType1Cnt, tUnit1Cnt):
         tempBase1 = tdata_first_type[i1: i1 + tUnit1Cnt]
-        tempBase1 = tempBase1.sort_values(['point_name'], ascending=True).reset_index(drop=True)
+        # tempBase1 = tempBase1.sort_values(['point_name'], ascending=True).reset_index(drop=True)
+        tempBase1 = tempBase1.reset_index(drop=True)
         for i2 in range(0, tUnit2Cnt * tType2Cnt, tUnit2Cnt):
             tCnt +=1
             tempBase2 = tdata_second_type[i2: i2 + tUnit2Cnt]
-            tempBase2 = tempBase2.sort_values(['point_name'], ascending=True).reset_index(drop=True)
+            # tempBase2 = tempBase2.sort_values(['point_name'], ascending=True).reset_index(drop=True)
+            tempBase2 = tempBase2.reset_index(drop=True)
             print('tCnt', tCnt)
             print('tdata_base1', tempBase1, "\n")
             print('tdata_base2', tempBase2, "\n")
@@ -1364,20 +1394,27 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
 
         print('\n')
 
+    # totalDf['type_idx'] = totalDf.point_name.str.split('|').str[1:].str.join(sep='|')
+    # totalDf = totalDf.sort_values(['title','type_idx', 'point_name'], ascending=True)
+    # totalDf = totalDf.drop_duplicates(['title','point_name'], keep='first').reset_index(drop=True)
+    # del(totalDf['type_idx'])
+    # totalDf[['group_first']] = totalDf.groupby('title').grouper.group_info[0] + 1
+
     totalDf['type_idx'] = totalDf.point_name.str.split('|').str[1:].str.join(sep='|')
-    totalDf = totalDf.sort_values(['title','type_idx', 'point_name'], ascending=True)
-    # totalDf = totalDf.duplicated(['point_name'], keep='first')
-    totalDf = totalDf.drop_duplicates(['title','point_name'], keep='first').reset_index(drop=True)
-    # df3 = tData[['group_sub', 'title']].drop_duplicates()
-    # df5_list = df3[~df3['group_sub'].str.contains("\*")].reset_index(drop=True)
-    del(totalDf['type_idx'])
-
+    totalDf = totalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+    totalDf = totalDf.drop_duplicates(['title', 'point_name'], keep='first').reset_index(drop=True)
+    del (totalDf['type_idx'])
     totalDf[['group_first']] = totalDf.groupby('title').grouper.group_info[0] + 1
-
     print('totalDf', totalDf)
-    return totalDf
-    # print(1/0)
-    # update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas)
+
+    retTotalDf = check_duplicate_and_remove(totalDf)
+    retTotalDf['type_idx'] = retTotalDf.point_name.str.split('|').str[1:].str.join(sep='|')
+    retTotalDf = retTotalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True).reset_index(drop=True)
+    del (retTotalDf['type_idx'])
+    print('retTotalDf', retTotalDf)
+
+    return retTotalDf
+
 def update_OtherType_position_using_rigid(ttype, tfirst, tsecond, trest_first, trest_second, tCount):
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
     tdebug = 1
@@ -1550,8 +1587,8 @@ def update_unitType_position_using_rigid(tdata_first_type2, tdata_second_type2):
 
 
 def update_position_using_relative_2title(ttype, tfirst, tsecond, tdatas):
-    decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas)
-    return tdatas
+    retData = decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas)
+    return retData
     print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
     tdebug = 1
     tdata2 = tdatas.copy()
@@ -2726,21 +2763,19 @@ def calc_relative_position_on_base_type(tBaseType, rData):
         print(ititle[0])
         # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
         tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
-        tdata_baseType = tdata_baseType.sort_values(['number'], ascending=True).reset_index(drop=True)
+        tdata_baseType['type_idx'] = tdata_baseType.point_name.str.split('|').str[1:].str.join(sep='|')
+        tdata_baseType = tdata_baseType.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+
+        tPatternCnt = pd.Series(tdata_baseType['type_idx']).value_counts().values[0]
+        print('tPatternCnt', tPatternCnt)
 
         tdata_all = rData[(rData['title'] == ititle[0])].reset_index(drop=True)
+        tdata_all['type_idx'] = tdata_all.point_name.str.split('|').str[1:].str.join(sep='|')
 
-        # if(len(tdata_baseType) >= C_PATTERN_COUNT):
         if(len(tdata_baseType) > 0):
-            # tPatternCnt = 0
-            # for jstr in tdata_baseType.point_name:
-            #     if(jstr.count("|")==0):
-            #         tPatternCnt +=1
-            tPatternCnt = pd.Series(tdata_baseType['number'] // 10000).value_counts().values[0]
-            print('tPatternCnt', tPatternCnt)
             for i in range(0, len(tdata_baseType), tPatternCnt):
                 tempBase = tdata_baseType[i: i + tPatternCnt]
-                tempBase = tempBase.sort_values(['point_name'], ascending=True)
+                # tempBase = tempBase.sort_values(['point_name'], ascending=True)
                 print('tdata_base', tempBase, "\n")
                 print('tdata_all', tdata_all)
                 tBase = np.asmatrix(tempBase[['tx', 'ty', 'tz']])
@@ -2757,6 +2792,12 @@ def calc_relative_position_on_base_type(tBaseType, rData):
                 print("\n")
                 retData = pd.concat([retData, tdata_all])
                 retC = True
+
+    if(retC==True):
+        retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+        del retData['type_idx']
+    print('\nretData', retData)
+    print('EEEEEEEEEEEEEEEEEEEE')
 
     return retC, retData
 
