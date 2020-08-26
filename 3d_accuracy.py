@@ -1273,7 +1273,7 @@ def check_duplicate_and_remove(tdatas):
 
         for i, tleft in df_temp.iterrows():
             for j, tright in df_temp.iterrows():
-                if(i == j):
+                if(i >= j):
                     continue
                 if (abs(tleft['tx'] - tright['tx']) <= C_MAX_GAP and abs(tleft['ty'] - tright['ty']) <= C_MAX_GAP and abs(tleft['tz'] - tright['tz']) <= C_MAX_GAP):
                     print('삭제', j,'번째', i)
@@ -1281,6 +1281,7 @@ def check_duplicate_and_remove(tdatas):
                     continue
         getData = pd.concat([getData, df_temp])
 
+    del (getData['compare_group'])
     if (tdebug):
         print('getData', len(getData), getData)
 
@@ -1336,6 +1337,8 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
 
     tdata_second_type = tdata2[(tdata2['group_sub'] == ttype) & (tdata2['title'] == tsecond) ].sort_values(['number'], ascending=True).reset_index(drop=True)
     tdata_second_without = tdata2[(tdata2['group_sub'] != ttype) & (tdata2['title'] == tsecond)].sort_values(['number'], ascending=True).reset_index(drop=True)
+
+    tdata_rest_title = tdata2[(tdata2['title'] != tfirst) & (tdata2['title'] != tsecond)].sort_values(['number'], ascending=True).reset_index(drop=True)
 
     tdata_first_type['type_idx'] = tdata_first_type.point_name.str.split('|').str[1:].str.join(sep='|')
     tdata_first_type = tdata_first_type.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
@@ -1408,10 +1411,11 @@ def decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas):
     print('totalDf', totalDf)
 
     retTotalDf = check_duplicate_and_remove(totalDf)
+    retTotalDf = pd.concat([retTotalDf, tdata_rest_title])
     retTotalDf['type_idx'] = retTotalDf.point_name.str.split('|').str[1:].str.join(sep='|')
     retTotalDf = retTotalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True).reset_index(drop=True)
     del (retTotalDf['type_idx'])
-    print('retTotalDf', retTotalDf)
+    print('retTotalDf', len(retTotalDf), retTotalDf)
 
     return retTotalDf
 
@@ -2764,12 +2768,12 @@ def calc_relative_position_on_base_type(tBaseType, rData):
         # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
         tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
         tdata_baseType['type_idx'] = tdata_baseType.point_name.str.split('|').str[1:].str.join(sep='|')
-        tdata_baseType = tdata_baseType.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+        tdata_baseType = tdata_baseType.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
 
         tPatternCnt = pd.Series(tdata_baseType['type_idx']).value_counts().values[0]
         print('tPatternCnt', tPatternCnt)
 
-        tdata_all = rData[(rData['title'] == ititle[0])].reset_index(drop=True)
+        tdata_all = rData[((rData['group_sub'] != tBaseType[0])) & (rData['title'] == ititle[0])].reset_index(drop=True)
         tdata_all['type_idx'] = tdata_all.point_name.str.split('|').str[1:].str.join(sep='|')
 
         if(len(tdata_baseType) > 0):
@@ -2777,7 +2781,7 @@ def calc_relative_position_on_base_type(tBaseType, rData):
                 tempBase = tdata_baseType[i: i + tPatternCnt]
                 # tempBase = tempBase.sort_values(['point_name'], ascending=True)
                 print('tdata_base', tempBase, "\n")
-                print('tdata_all', tdata_all)
+                # print('tdata_all', tdata_all)
                 tBase = np.asmatrix(tempBase[['tx', 'ty', 'tz']])
                 tTarget = np.asmatrix(tdata_all[['tx', 'ty', 'tz']])
                 print('\n','tBase',tBase)
@@ -2786,15 +2790,22 @@ def calc_relative_position_on_base_type(tBaseType, rData):
                 # m_ProjectDispCoor(np.mean(p550N_Eye, axis=0), p550N_Pattern)
                 retRelativePos, rr, tt = m_ProjectDispCoor(tTarget, tBase)
                 # print(np.round(retRelativePos,4))
-                tdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+                tempdata_all = tdata_all.copy()
+                tempdata_all[['tx', 'ty', 'tz']] = pd.DataFrame(retRelativePos, columns=['tx', 'ty', 'tz'])[['tx', 'ty', 'tz']]
+                # tempdata_all['point_name'] = tempdata_all['point_name'] + '/' + tempdata_all['type_idx']
+                # if (tempdata_all.type_idx.any() != ""):
+                # if (tempdata_all.point_name.str.split('|').str[1:].str.join(sep='|').any() == []):
+                #     tempdata_all['point_name'] = tempdata_all['point_name']
+                # else:
+                #     tempdata_all['point_name'] = tempdata_all['point_name'] + '/' + tempdata_all['type_idx']
 
-                print('tdata_all', tdata_all)
+                print('tempdata_all', tempdata_all)
                 print("\n")
-                retData = pd.concat([retData, tdata_all])
+                retData = pd.concat([retData, tempdata_all])
                 retC = True
 
     if(retC==True):
-        retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
+        retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
         del retData['type_idx']
     print('\nretData', retData)
     print('EEEEEEEEEEEEEEEEEEEE')
