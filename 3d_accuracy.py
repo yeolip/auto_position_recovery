@@ -3041,7 +3041,7 @@ class mainMenu_GUI():
 
         helpmenu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Help", menu=helpmenu)
-        helpmenu.add_command(label="About", command=domenu)
+        helpmenu.add_command(label="About", command=self.help_about)
 
         self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-80, height=C_MENU_HEIGHT-80)
         # self.notebook.pack(fill=tk.BOTH, expand=True)
@@ -3132,6 +3132,27 @@ class mainMenu_GUI():
         self.filename = ""
         self.tresult = ""
         self.tresult_base_pos = ""
+
+    def help_about(self):
+        tHLayer = tk.Tk()
+        tHLayer.title("Auto position recovery-V1.01")
+        # self.root.geometry("640x400+100+100")
+        tHLayer.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH/1.8,C_MENU_HEIGHT/1.8,C_MENU_POS_X*2,C_MENU_POS_Y*2 ))
+        tHLayer.resizable(True, True)
+
+        label1 = tk.Label(tHLayer, text="Automatic position recovery\n using relative coordinate on 3D",width=30, height=3)
+        label1.grid(row=2, column = 0)
+
+        label2 = tkinter.Label(tHLayer, text="3차원공간 위의 상대좌표를 이용한 자동 위치 복원", width=50, height=5)
+        label2.grid(row=3, column = 0)
+
+        label3 = tkinter.Label(tHLayer, text="3차원 공간에 움직이지 않는 기준점(테이블)을 두고,\n사과와 컵의 위치를 각각 추출했을때,\n사과와 컵의 위치 관계를 자동으로 복원시켜주는 기능")
+        label3.grid(row=15, column = 0)
+
+        label4 = tkinter.Label(tHLayer, text="Copyright@ 2019-2020 magicst3@gmail.com",width=50, height=5)
+        label4.grid(row=18, column = 0, sticky=tk.S)
+
+        tHLayer.mainloop()
 
     def event_selectTab(self, event):
         # print(event.widget.index("current"))
