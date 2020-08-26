@@ -2507,21 +2507,24 @@ def extract_dup_type_between_titles(tfirst, tsecond, tdatas , inputlist, tIdx):
     print("match", ret, retType)
     return ret, retType
 
-def parsing_selected_data_by_tabType(tIdx, dictData):
+def parsing_selected_data_by_tabType(tIdx, dictData, skipData):
     print("//////////",funcname(),"////////// ", tIdx)
     nCnt = 0
     nRet = True
     retData = ""
+
+    tdictData = []
+    tdicDataValue = []
+    tSkipData = []
+
     for key, value in dictData.items():
         if value.get():
             nCnt += 1
     if(nCnt == 0):
         retData = "체크박스가 선택되지 않았습니다."
         print(retData)
-        return False, tIdx, dictData, retData
+        return False, tIdx, dictData, retData, tSkipData
 
-    tdictData = []
-    tdicDataValue = []
 
     if(tIdx == C_TAB1):
         for key, value in dictData.items():
@@ -2531,7 +2534,7 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         if(tdictData == []):
             retData = "중복개수 2이상인 포인트 그룹이 선택되지 않았으니, 다시 선택하시오!!"
             print(retData)
-            return False, tIdx, dictData, retData
+            return False, tIdx, dictData, retData, tSkipData
         print(tdictData)
         print(tdicDataValue)
         retData = np.concatenate((np.array(tdictData).reshape(-1,1), np.array(tdicDataValue).reshape(-1,1)), axis=1)
@@ -2576,7 +2579,7 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         if(nCnt != 1):
             retData = "1개만 선택해야합니다!!"
             print(retData)
-            return False, tIdx, dictData, retData
+            return False, tIdx, dictData, retData, tSkipData
 
         for key, value in dictData.items():
             if value.get():
@@ -2584,9 +2587,15 @@ def parsing_selected_data_by_tabType(tIdx, dictData):
         print(tdictData)
         retData = tdictData
 
-    return nRet, tIdx, dictData, retData
+    ####################Skip type implimentation
+    for key, value in skipData.items():
+        if value.get():
+            tSkipData.append(key.split(' |')[0])
+    print(tSkipData)
 
-def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
+    return nRet, tIdx, dictData, retData, tSkipData
+
+def calc_auto_recovery_3d_points(tDatas, tIdx, dictData, skipData):
     print("//////////",funcname(),"//////////")
     retFlag = True
     retText = ""
@@ -2596,7 +2605,7 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
         if value.get():
             print(key)
     print("")
-    retC, tIdx, dictData, retData = parsing_selected_data_by_tabType(tIdx, dictData)
+    retC, tIdx, dictData, retData, tSkipData = parsing_selected_data_by_tabType(tIdx, dictData, skipData)
 
     if(retC == False):
         retFlag = retC
@@ -2611,6 +2620,13 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
     if(tdebug):
         print(tData.head())
         print(tData.tail())
+    print('tData_all', len(tData),tData)
+    tData_skip = pd.DataFrame()
+    for itype in tSkipData:
+        tData_skip = pd.concat([tData_skip , tData[tData['group_sub']==itype]])
+        tData = tData[~(tData['group_sub']==itype)]
+    print('tData_skip', len(tData_skip),tData_skip)
+    print('tData', len(tData), tData)
 
     if(tIdx == C_TAB3):
         tModifiedData = tData.copy() #pd.DataFrame()
@@ -2752,10 +2768,17 @@ def calc_auto_recovery_3d_points(tDatas, tIdx, dictData):
             ttcnt += 1
             print('\t', jtype, '->', title_one, 'vs', title_two)
             tvalidData = update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
-    print('final tvalidData',tvalidData)
+    # print('final tvalidData',tvalidData)
+
+    tRet_Merge = pd.concat([tvalidData, tData_skip])
+    tRet_Merge['type_idx'] = tRet_Merge.point_name.str.split('|').str[1:].str.join(sep='|')
+    tRet_Merge = tRet_Merge.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
+    del(tRet_Merge['type_idx'])
+    print('final tvalidData',tRet_Merge)
+
 
     print("\nRRRRRRRRRRRRRR")
-    return retFlag, retText, tvalidData
+    return retFlag, retText, tRet_Merge
 
 def calc_relative_position_on_base_type(tBaseType, rData):
     ttitles = np.asmatrix(rData['title'].drop_duplicates().reset_index(drop=True)).T.tolist()
@@ -2767,8 +2790,11 @@ def calc_relative_position_on_base_type(tBaseType, rData):
         print(ititle[0])
         # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
         tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
+        if(len(tdata_baseType) == 0):
+            continue
         tdata_baseType['type_idx'] = tdata_baseType.point_name.str.split('|').str[1:].str.join(sep='|')
         tdata_baseType = tdata_baseType.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
+
 
         tPatternCnt = pd.Series(tdata_baseType['type_idx']).value_counts().values[0]
         print('tPatternCnt', tPatternCnt)
@@ -2806,7 +2832,7 @@ def calc_relative_position_on_base_type(tBaseType, rData):
 
     if(retC==True):
         retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
-        del retData['type_idx']
+        # del retData['type_idx']
     print('\nretData', retData)
     print('EEEEEEEEEEEEEEEEEEEE')
 
@@ -3102,6 +3128,7 @@ class mainMenu_GUI():
         self.root.config(menu=self.menubar)
 
         self.button_dict = {}
+        self.button_skip = {}
         self.filename = ""
         self.tresult = ""
         self.tresult_base_pos = ""
@@ -3126,6 +3153,10 @@ class mainMenu_GUI():
 
     def dynamic_checkBox(self, button_dict, idx, tText=""):
         self.button_dict = button_dict
+        self.button_skip = dict([(str(key).split('\t')[0]+" |Skip", value) for key, value in button_dict.items()])
+        # self.button_skip = dict([("Skip | "+ key.split('\t\t')[0]+ key.split('\t\t')[1], value) for key, value in button_dict.items()])
+
+        print(self.button_dict, '\n',self.button_skip)
         row = len(self.button_dict) + 2
 
         tTitleText = tk.Label(self.mframe[idx], text=tText,fg="blue", bg="#FF0")
@@ -3136,6 +3167,11 @@ class mainMenu_GUI():
             # set the variable of the checkbutton to the value of our dictionary so that our dictionary is updated each time a button is checked or unchecked
             c = tk.Checkbutton(self.mframe[idx], text=key, variable=self.button_dict[key], bg='white')
             c.grid(row=i, sticky=tk.W)
+        for i, key in enumerate(self.button_skip, 2):
+            self.button_skip[key] = tk.IntVar()
+            if (idx == C_TAB1 or idx == C_TAB2 or idx == C_TAB3):
+                d = tk.Checkbutton(self.mframe[idx], text=key, variable=self.button_skip[key], bg='pink')
+                d.grid(row=i, column =1)
 
         tinclude = tk.Button(self.mframe[idx], text='Include', command=self.query_include)
         tinclude.grid(row=row, sticky=tk.W)
@@ -3150,12 +3186,22 @@ class mainMenu_GUI():
         for key, value in self.button_dict.items():
             if value.get():
                 print(key)
-        print("")
+        print("",'\n---skip---', len(self.button_skip))
+        if(len(self.button_skip)):
+            for key, value in self.button_skip.items():
+                if value.get():
+                    print(key)
+            print("")
 
     def query_exclude(self):
         for key, value in self.button_dict.items():
             if not value.get():
                 print(key)
+        print("",'\n---skip---', len(self.button_skip))
+        if(len(self.button_skip)):
+            for key, value in self.button_skip.items():
+                if not value.get():
+                    print(key)
         print("")
 
     def running_result(self):
@@ -3163,7 +3209,7 @@ class mainMenu_GUI():
         #     print("C_TAB5가 눌렸습니다.")
         #     return
         # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
-        ret, retData, resultData = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict)
+        ret, retData, resultData = calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict, self.button_skip)
         if(ret == False):
             print(retData)
             return
