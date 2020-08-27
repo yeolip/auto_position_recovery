@@ -15,18 +15,18 @@ from tkinter import filedialog
 from tkinter import messagebox
 
 # 12 GT점
-# 548.0606, -0.9230, 202.5364,
-# 548.1446, -125.9743, 202.7360,
+# 548.0606, -0.9230, 202.5364,   C
+# 548.1446, -125.9743, 202.7360, N
 # 548.1358, 123.9789, 202.4794,
-# 658.2693, -0.8927, 203.8425,
-# 658.2218, -157.4343, 204.1222,
+# 658.2693, -0.8927, 203.8425,   C
+# 658.2218, -157.4343, 204.1222, N
 # 658.4669, 155.4454, 203.8754,
-# 768.5166, -0.9942, 205.2305,
-# 768.3877, -187.8320, 205.2665,
-# 768.5165, 186.0766, 205.2247,
-# 998.9362, -0.9115, 207.5076,
-# 999.4603, -223.7147, 208.0781,
-# 998.7845, 222.0334, 207.5687
+# 768.5166, -0.9942, 205.2305,   C
+# 768.3877, -187.8320, 205.2665, N
+# 768.5165, 186.0766, 205.2247,  P
+# 998.9362, -0.9115, 207.5076,   C
+# 999.4603, -223.7147, 208.0781, N(L)
+# 998.7845, 222.0334, 207.5687   P(R)
 
 #Automatic virtual position recovery using relative coordinates
 
@@ -2832,7 +2832,7 @@ def calc_relative_position_on_base_type(tBaseType, rData):
 
     if(retC==True):
         retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
-        # del retData['type_idx']
+        del retData['type_idx']
     print('\nretData', retData)
     print('EEEEEEEEEEEEEEEEEEEE')
 
