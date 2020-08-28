@@ -2106,8 +2106,10 @@ class mainMenu_GUI():
 
         self.menubar.add_cascade(label='File', menu=filemenu)
         filemenu.add_command(label="New", command=self.menu_new)
-        filemenu.add_command(label="Load", command=self.menu_load)
-        filemenu.add_command(label="Save", command=self.menu_save)
+        filemenu.add_command(label="Load Data", command=self.menu_load)
+        filemenu.add_command(label="Save Data", command=self.menu_save)
+        filemenu.add_separator()
+        filemenu.add_command(label="Save Log", command=self.menu_save)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.root.quit)
 
@@ -2115,17 +2117,21 @@ class mainMenu_GUI():
         self.menubar.add_cascade(label="Help", menu=helpmenu)
         helpmenu.add_command(label="About", command=self.help_about)
 
-        self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-80, height=C_MENU_HEIGHT-80)
+        self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-40, height=C_MENU_HEIGHT-80)
         # self.notebook.pack(fill=tk.BOTH, expand=True)
         self.notebook.pack()
 
         self.label2 = tk.Label(self.root, text="")
         self.label2.pack()
 
+        self.textlog = tk.Text(self.root, width=86)
+        self.textlog.pack()
+
         self.initial_data()
         self.menu_new()
 
         self.ObjCtrl = RecoveryCtrl()
+
 
     def initial_data(self):
         self.mframe = [0, 0, 0, 0, 0]
@@ -2138,6 +2144,9 @@ class mainMenu_GUI():
             self.label2.configure(text = str(ttext), bg=tcolor)
 
     def menu_new(self):
+        self.textlog.delete('1.0',tk.END)
+        sys.stdout = PrintLogger(self.textlog)
+
         if(self.mframe[0] != 0 and self.mframe[1] != 0 and self.mframe[2] != 0 and self.mframe[3] != 0):
             self.mframe[0].destroy()
             self.mframe[1].destroy()
@@ -2404,24 +2413,36 @@ class mainMenu_GUI():
     #         time.sleep(0.01)
     #     # self.root.after(1000,self.main2)
 
-print("Start 3d accuracy\n")
-if (0):
-    sys.stdout = open('DebugLog-3d.txt', 'w')
-gui = mainMenu_GUI()
-gui.main()
+class PrintLogger(): # create file like object
+    def __init__(self, textbox): # pass reference to text widget
+        self.textbox = textbox # keep ref
 
-# print(1/0)
+    def write(self, text):
+        self.textbox.insert(tk.END, text) # write text to textbox
+            # could also scroll to end of textbox here to make sure always visible
 
-# relative_position_based_on_refer_point()
-# print(1/0)
+    def flush(self): # needed for file like object
+        pass
 
-# relative_position_based_on_many_points()
-# move_origin_from_refer_point()
-# tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
+if __name__ == '__main__':
+    print("Start 3d accuracy\n")
+    if (0):
+        sys.stdout = open('DebugLog-3d.txt', 'w')
+    gui = mainMenu_GUI()
+    gui.main()
 
-# ret_type_one = preprocess(tdata)
-# print(ret_type_one)
-# tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
-# save_DPA_file(tresult, "result.txt")
-# check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
-# test()
+    # print(1/0)
+
+    # relative_position_based_on_refer_point()
+    # print(1/0)
+
+    # relative_position_based_on_many_points()
+    # move_origin_from_refer_point()
+    # tdata = load_DPA_file("0128_eye_display_coordinate_ext2.txt") #미완성
+
+    # ret_type_one = preprocess(tdata)
+    # print(ret_type_one)
+    # tresult = auto_recovery_3d_points_on_each_of_coordinate(tdata)
+    # save_DPA_file(tresult, "result.txt")
+    # check_face_pos_GT_based_on_MRA2_CAD_displaycenter()
+    # test()
