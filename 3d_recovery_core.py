@@ -8,6 +8,7 @@ import csv
 import pandas as pd
 from itertools import combinations
 import time
+import datetime as dt
 
 import tkinter as tk
 import tkinter.ttk
@@ -53,6 +54,11 @@ C_PRINT_CTRL_ENABLE = 0
 
 degreeToRadian = math.pi/180
 radianToDegree = 180/math.pi
+
+def print_current_time(text=''):
+    tnow = dt.datetime.now()
+    print('%s-%2s-%2s %2s:%2s:%2s %s' % (tnow.year, tnow.month, tnow.day, tnow.hour, tnow.minute, tnow.second, text))
+
 
 def isRotationMatrix(R):
     Rt = np.transpose(R)
@@ -1014,6 +1020,7 @@ class RecoveryCtrl():
         fname, fext = os.path.splitext(filename)
         # print(fname, fext)
         tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
+        # tdata.to_excel(fname+".xls")    #xls저장
 
         if(tdata.get(['group_sub']) is not None):
             del tdata['group_sub']
@@ -1900,6 +1907,23 @@ class RecoveryCtrl():
                     print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
                     for j, (j_title_one, j_title_two) in enumerate(combination_of_title):
                         if((j_title_one == title_one and j_title_two == title_two) or (j_title_one == title_two and j_title_two == title_one)):
+                            print('j', j_title_one, j_title_two, '- delete')
+                            del combination_of_title[j]
+                            print(ttcnt, 'combination rest', combination_of_title)
+                            ttcnt += 1
+                            tvalidData = self.update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+                            break
+        elif (0):
+            for i, (jcount, jtype, jcomp) in enumerate(tData_grp_add):
+                # if(jtype == "MANE"):
+                #     continue
+                print(i, jcomp)
+                # print(list(combinations(jcomp, 2)))
+                tloop = list(combinations(jcomp, 2))
+                for title_one, title_two in tloop:
+                    print('\t',jtype , '->' ,title_one, 'vs' ,title_two )
+                    for j, (j_title_one, j_title_two) in enumerate(combination_of_title):
+                        if((j_title_one == title_one and j_title_two == title_two) or (j_title_one == title_two and j_title_two == title_one)):
                             del combination_of_title[j]
                             print('j', j_title_one, j_title_two)
                             break
@@ -2124,12 +2148,15 @@ class mainMenu_GUI():
         self.label2 = tk.Label(self.root, text="")
         self.label2.pack()
 
-        self.textlog = tk.Text(self.root, width=86)
+        # self.textlog = tk.Text(self.root, width=86)
+        self.textlog = tk.Text(self.root, width=100, font=("Helvetica", 8))
+
         self.textlog.pack()
 
         self.initial_data()
         self.menu_new()
 
+        sys.stdout = Logger(self.textlog)
         self.ObjCtrl = RecoveryCtrl()
 
 
@@ -2145,7 +2172,6 @@ class mainMenu_GUI():
 
     def menu_new(self):
         self.textlog.delete('1.0',tk.END)
-        sys.stdout = PrintLogger(self.textlog)
 
         if(self.mframe[0] != 0 and self.mframe[1] != 0 and self.mframe[2] != 0 and self.mframe[3] != 0):
             self.mframe[0].destroy()
@@ -2320,11 +2346,15 @@ class mainMenu_GUI():
         print("")
 
     def running_result(self):
+        print_current_time(funcname())
+        self.textlog.delete('1.0', tk.END)
+
         # if(self.mframeIdx == C_TAB5):
         #     print("C_TAB5가 눌렸습니다.")
         #     return
         # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
         ret, retData, resultData = self.ObjCtrl.calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict, self.button_skip)
+        print_current_time(funcname())
         if(ret == False):
             print(retData)
             self.alert_msg(retData)
@@ -2349,7 +2379,9 @@ class mainMenu_GUI():
 
         if self.filename:
             try:
+                print_current_time(funcname())
                 print("Load %s" % self.filename)
+                self.textlog.delete('1.0', tk.END)
             except:  # <- naked except is a bad idea
                 messagebox.showerror("Load Data File", "Failed to read file\n'%s'" % self.filename)
 
@@ -2385,7 +2417,7 @@ class mainMenu_GUI():
             return
 
     def menu_save(self):
-        if((self.tresult.empty is True) or (self.mframeIdx == C_TAB5 and self.tresult_base_pos.empty is True)):
+        if((self.mframeIdx != C_TAB5 and self.tresult.empty is True) or (self.mframeIdx == C_TAB5 and self.tresult_base_pos.empty is True)):
             self.alert_msg('저장할 데이터가 없습니다.')
             return
 
@@ -2420,6 +2452,20 @@ class PrintLogger(): # create file like object
     def write(self, text):
         self.textbox.insert(tk.END, text) # write text to textbox
             # could also scroll to end of textbox here to make sure always visible
+
+    def flush(self): # needed for file like object
+        pass
+
+class Logger():
+    def __init__(self, textbox, filename='DebugLog-3d.txt'):
+        self.terminal = sys.stdout
+        self.log = open(filename, "w")
+        self.textbox = textbox  # keep ref
+
+    def write(self, message):
+        self.terminal.write(message)          # stdout
+        self.log.write(message)               # fileout
+        self.textbox.insert(tk.END, message)  # write text to textbox
 
     def flush(self): # needed for file like object
         pass
