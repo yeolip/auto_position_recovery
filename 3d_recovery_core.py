@@ -6,6 +6,7 @@ import sys
 import copy
 import csv
 import pandas as pd
+import threading
 from itertools import combinations
 import time
 import datetime as dt
@@ -1019,8 +1020,9 @@ class RecoveryCtrl():
 
         fname, fext = os.path.splitext(filename)
         # print(fname, fext)
-        tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
-        # tdata.to_excel(fname+".xls")    #xls저장
+        # tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
+        print(fname+".xls")
+        tdata.to_excel(fname+".xls")    #xls저장
 
         if(tdata.get(['group_sub']) is not None):
             del tdata['group_sub']
@@ -2133,7 +2135,7 @@ class mainMenu_GUI():
         filemenu.add_command(label="Load Data", command=self.menu_load)
         filemenu.add_command(label="Save Data", command=self.menu_save)
         filemenu.add_separator()
-        filemenu.add_command(label="Save Log", command=self.menu_save)
+        filemenu.add_command(label="Save Log", command=self.menu_save_log)
         filemenu.add_separator()
         filemenu.add_command(label="Exit", command=self.root.quit)
 
@@ -2150,8 +2152,12 @@ class mainMenu_GUI():
 
         # self.textlog = tk.Text(self.root, width=86)
         self.textlog = tk.Text(self.root, width=100, font=("Helvetica", 8))
+        tscroll = tk.Scrollbar(self.root, command=self.textlog.yview, orient=tk.VERTICAL)
+        tscroll.config(command=self.textlog.yview)
+        self.textlog.configure(yscrollcommand=tscroll.set)
+        self.textlog.pack(side=tk.LEFT, fill=tk.Y, expand='YES')
+        tscroll.pack(side=tk.RIGHT, fill=tk.BOTH)
 
-        self.textlog.pack()
 
         self.initial_data()
         self.menu_new()
@@ -2161,6 +2167,7 @@ class mainMenu_GUI():
 
 
     def initial_data(self):
+        self.tOne = threading.Thread()
         self.mframe = [0, 0, 0, 0, 0]
         self.mframeIdx = 0
 
@@ -2320,8 +2327,8 @@ class mainMenu_GUI():
         texclude = tk.Button(self.mframe[idx], text='Exclude', command=self.query_exclude)
         texclude.grid(row=row, sticky=tk.E, padx=50)
 
-        trunning = tk.Button(self.mframe[idx], text='Running_Result', command=self.running_result)
-        trunning.grid(row=row + 1, sticky=tk.W)
+        self.trunning = tk.Button(self.mframe[idx], text='Running_Result', command=self.running_result)
+        self.trunning.grid(row=row + 1, sticky=tk.W)
 
     def query_include(self):
         for key, value in self.button_dict.items():
@@ -2346,18 +2353,28 @@ class mainMenu_GUI():
         print("")
 
     def running_result(self):
+        if(self.tOne.is_alive()):
+            print("계산중입니다.")
+            self.alert_msg("계산중입니다.")
+            return
+
+        self.trunning['state'] = "disable"
+        self.counter = 0
+        self.tOne = threading.Thread(target=self.running_result_thread)
+        self.tOne.daemon = True
+        self.tOne.start()
+        # t1.join()
+
+    def running_result_thread(self):
         print_current_time(funcname())
         self.textlog.delete('1.0', tk.END)
 
-        # if(self.mframeIdx == C_TAB5):
-        #     print("C_TAB5가 눌렸습니다.")
-        #     return
-        # self.tresult = auto_recovery_3d_points_on_each_of_coordinate(self.tdata)
         ret, retData, resultData = self.ObjCtrl.calc_auto_recovery_3d_points(self.tdata, self.mframeIdx, self.button_dict, self.button_skip)
         print_current_time(funcname())
         if(ret == False):
             print(retData)
             self.alert_msg(retData)
+            self.trunning['state'] = "normal"
             return
         if(self.mframeIdx == C_TAB1 or self.mframeIdx == C_TAB2 or self.mframeIdx == C_TAB3 or self.mframeIdx == C_TAB4):
             print("계산이 완료되었습니다.")
@@ -2370,6 +2387,8 @@ class mainMenu_GUI():
             ret, result = self.ObjCtrl.calc_relative_position_on_base_type(tType, resultData)
             if (ret == True):
                 self.tresult_base_pos = result
+
+        self.trunning['state'] = "normal"
 
     def menu_load(self, autoLoad=0):
         if(autoLoad == 0):
@@ -2428,10 +2447,24 @@ class mainMenu_GUI():
                 print("Save %s" % filename)
             except:  # <- naked except is a bad idea
                 messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % filename)
+
             if (self.mframeIdx == C_TAB5):
                 self.ObjCtrl.save_DPA_file(self.tresult_base_pos, filename)
             else:
                 self.ObjCtrl.save_DPA_file(self.tresult, filename)
+            return
+
+    def menu_save_log(self):
+        filename = filedialog.asksaveasfilename(initialdir='./', title='Select file',
+                                                filetypes=(("log files", "*.log"), ("all files", "*.*")))
+        if filename:
+            try:
+                print("Save log %s" % filename)
+            except:  # <- naked except is a bad idea
+                messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % filename)
+            with open(filename, 'w') as f:
+                f.write(self.textlog.get(1.0, tk.END))
+                f.close
             return
 
     def main(self):
@@ -2466,6 +2499,7 @@ class Logger():
         self.terminal.write(message)          # stdout
         self.log.write(message)               # fileout
         self.textbox.insert(tk.END, message)  # write text to textbox
+        self.textbox.see(tk.END)
 
     def flush(self): # needed for file like object
         pass
