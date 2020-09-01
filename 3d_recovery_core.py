@@ -34,11 +34,11 @@ from tkinter import messagebox
 #Automatic virtual position recovery using relative coordinates
 
 # 최대 줄 수 설정
-pd.set_option('display.max_rows', 1000)
+pd.set_option('display.max_rows', 2500)
 # 최대 열 수 설정
 pd.set_option('display.max_columns', 50)
 # 표시할 가로의 길이
-pd.set_option('display.width', 140)
+pd.set_option('display.width', 160)
 # 출력값 소숫점4자리로 설정
 pd.options.display.float_format = '{:.4f}'.format
 
@@ -998,6 +998,8 @@ class RecoveryCtrl():
         self.debugflag = C_PRINT_CTRL_ENABLE
         self.objCore = RecoveryAlgo()
         print("*************initialize RecoveryCtrl class***********\n")
+        self.progress_pos = 0
+        self.progress_end = 100
 
     def load_DPA_file(self, fname):
         print("//////////", funcname(), "//////////")
@@ -1007,22 +1009,25 @@ class RecoveryCtrl():
         df.columns = ['title', 'number', 'point_name', 'tx', 'ty', 'tz']
         df = df.sort_values(['title','point_name','number'], ascending=(True,True,True))
         # print(tData)
-
         return df
 
-    def save_DPA_file(self, tdata, filename):
+    def save_DPA_file(self, tdatas, filename):
         print("//////////", funcname(), "//////////")
-        if(tdata.empty is True):
+        if(tdatas.empty is True):
             print("저장할 데이터가 없습니다.")
             return
-
+        tdata = tdatas.copy()
         tdata.point_name = '"' + tdata.point_name + '"'
 
         fname, fext = os.path.splitext(filename)
         # print(fname, fext)
         # tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
         print(fname+".xls")
-        tdata.to_excel(fname+".xls")    #xls저장
+        try:
+            tdata.to_excel(fname + ".xls")  # xls저장
+        except:  # <- naked except is a bad idea
+            tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
+            messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % (fname + ".xls"))
 
         if(tdata.get(['group_sub']) is not None):
             del tdata['group_sub']
@@ -1135,10 +1140,12 @@ class RecoveryCtrl():
                 for j, tright in df_temp.iterrows():
                     if(i >= j):
                         continue
-                    if (abs(tleft['tx'] - tright['tx']) <= C_MAX_GAP and abs(tleft['ty'] - tright['ty']) <= C_MAX_GAP and abs(tleft['tz'] - tright['tz']) <= C_MAX_GAP):
-                        print('삭제', j,'번째', i)
-                        df_temp = df_temp.drop(j, axis=0)
-                        continue
+                    # if (abs(tleft['tx'] - tright['tx']) <= C_MAX_GAP and abs(tleft['ty'] - tright['ty']) <= C_MAX_GAP and abs(tleft['tz'] - tright['tz']) <= C_MAX_GAP):
+                    if (abs(tleft['tx'] - tright['tx']) <= C_MAX_GAP ):
+                        if(abs(tleft['ty'] - tright['ty']) <= C_MAX_GAP and abs(tleft['tz'] - tright['tz']) <= C_MAX_GAP):
+                            print('삭제', j,'번째', i)
+                            df_temp = df_temp.drop(j, axis=0)
+                            # continue
             getData = pd.concat([getData, df_temp])
 
         del (getData['compare_group'])
@@ -1189,6 +1196,7 @@ class RecoveryCtrl():
         tdata_first_type = tdata_first_type.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
         tcount1_type = pd.Series(tdata_first_type['type_idx'] ).value_counts()
         tUnit1Cnt = pd.Series(tdata_first_type['type_idx'] ).value_counts().values[0]
+        tdata_first_type = tdata_first_type[~tdata_first_type['type_idx'].isin(tdata_first_type['type_idx'].value_counts()[tdata_first_type['type_idx'].value_counts() != tUnit1Cnt].index)]
         tType1Cnt = len(pd.Series(tdata_first_type['type_idx'] ).value_counts())
         del(tdata_first_type['type_idx'])
 
@@ -1196,7 +1204,9 @@ class RecoveryCtrl():
         tdata_second_type = tdata_second_type.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
         tcount2_type = pd.Series(tdata_second_type['type_idx'] ).value_counts()
         tUnit2Cnt = pd.Series(tdata_second_type['type_idx'] ).value_counts().values[0]
+        tdata_second_type = tdata_second_type[~tdata_second_type['type_idx'].isin(tdata_second_type['type_idx'].value_counts()[tdata_second_type['type_idx'].value_counts() != tUnit2Cnt].index)]
         tType2Cnt = len(pd.Series(tdata_second_type['type_idx'] ).value_counts())
+        #하나의 title에서 동일 type에대해 갯수가 다른것에 한해, 제거한다
         del(tdata_second_type['type_idx'])
 
         if(tUnit1Cnt < C_MIN_VALUE_RIGID_CALC or tUnit2Cnt < C_MIN_VALUE_RIGID_CALC):
@@ -1241,7 +1251,6 @@ class RecoveryCtrl():
                 totalDf = pd.concat([totalDf, tempBaseOne, tempBaseTwo, tempBaseOneRest, tempBaseTwoRest,])
 
             print('\n')
-
         # totalDf['type_idx'] = totalDf.point_name.str.split('|').str[1:].str.join(sep='|')
         # totalDf = totalDf.sort_values(['title','type_idx', 'point_name'], ascending=True)
         # totalDf = totalDf.drop_duplicates(['title','point_name'], keep='first').reset_index(drop=True)
@@ -1260,6 +1269,7 @@ class RecoveryCtrl():
         retTotalDf['type_idx'] = retTotalDf.point_name.str.split('|').str[1:].str.join(sep='|')
         retTotalDf = retTotalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True).reset_index(drop=True)
         del (retTotalDf['type_idx'])
+        retTotalDf[['group_first']] = retTotalDf.groupby('title').grouper.group_info[0] + 1
         print('retTotalDf', len(retTotalDf), retTotalDf)
 
         return retTotalDf
@@ -1436,6 +1446,8 @@ class RecoveryCtrl():
 
 
     def update_position_using_relative_2title(self, ttype, tfirst, tsecond, tdatas):
+        print("//////////", funcname(), "//////////")
+        # print('tdatas',tdatas)
         retData = self.decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas)
         return retData
 
@@ -1966,10 +1978,12 @@ class RecoveryCtrl():
     def calc_relative_position_on_base_type(self, tBaseType, rData):
         ttitles = np.asmatrix(rData['title'].drop_duplicates().reset_index(drop=True)).T.tolist()
         print(ttitles)
+        self.progress_end = len(ttitles)
+        self.progress_pos = 0
         # print(ttitles.shape)
         retC = False
         retData = pd.DataFrame()
-        for ititle in ttitles:
+        for ipos, ititle in enumerate(ttitles):
             print(ititle[0])
             # tdata_baseType = rData[['point_name', 'tx', 'ty', 'tz']][(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0]) ]
             tdata_baseType = rData[(rData['group_sub'] == tBaseType[0]) & (rData['title'] == ititle[0])]
@@ -1981,6 +1995,7 @@ class RecoveryCtrl():
 
             tPatternCnt = pd.Series(tdata_baseType['type_idx']).value_counts().values[0]
             print('tPatternCnt', tPatternCnt)
+            tdata_baseType = tdata_baseType[~tdata_baseType['type_idx'].isin(tdata_baseType['type_idx'].value_counts()[tdata_baseType['type_idx'].value_counts() != tPatternCnt].index)]
 
             tdata_all = rData[((rData['group_sub'] != tBaseType[0])) & (rData['title'] == ititle[0])].reset_index(drop=True)
             tdata_all['type_idx'] = tdata_all.point_name.str.split('|').str[1:].str.join(sep='|')
@@ -2008,17 +2023,20 @@ class RecoveryCtrl():
                     # else:
                     #     tempdata_all['point_name'] = tempdata_all['point_name'] + '/' + tempdata_all['type_idx']
 
-                    print('tempdata_all', tempdata_all)
+                    # print('tempdata_all', tempdata_all)
                     print("\n")
                     retData = pd.concat([retData, tempdata_all])
                     retC = True
+
+            self.progress_pos = ipos
+        # self.check_duplicate_and_remove(retData)
 
         if(retC==True):
             retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
             del retData['type_idx']
         print('\nretData', retData)
         print('EEEEEEEEEEEEEEEEEEEE')
-
+        self.progress_pos = self.progress_end
         return retC, retData
 
     def parsing_selected_data_by_tabType(self, tIdx, dictData, skipData):
@@ -2330,6 +2348,12 @@ class mainMenu_GUI():
         self.trunning = tk.Button(self.mframe[idx], text='Running_Result', command=self.running_result)
         self.trunning.grid(row=row + 1, sticky=tk.W)
 
+
+        self.progress = tkinter.ttk.Progressbar(self.mframe[idx], orient="horizontal", length=400, mode="determinate")
+        # self.progress.pack()
+        # self.progress.grid(row=row + 5, sticky=tk.N)
+        self.progress.grid(row=row + 5, sticky=tk.S)
+
     def query_include(self):
         for key, value in self.button_dict.items():
             if value.get():
@@ -2364,6 +2388,7 @@ class mainMenu_GUI():
         self.tOne.daemon = True
         self.tOne.start()
         # t1.join()
+        self.progress_start()
 
     def running_result_thread(self):
         print_current_time(funcname())
@@ -2386,6 +2411,8 @@ class mainMenu_GUI():
             tType = retData
             ret, result = self.ObjCtrl.calc_relative_position_on_base_type(tType, resultData)
             if (ret == True):
+                print("계산이 완료되었습니다.")
+                self.alert_msg("계산이 완료되었습니다.", "green2")
                 self.tresult_base_pos = result
 
         self.trunning['state'] = "normal"
@@ -2466,6 +2493,29 @@ class mainMenu_GUI():
                 f.write(self.textlog.get(1.0, tk.END))
                 f.close
             return
+
+    def progress_start(self):
+        self.ObjCtrl.progress_pos = 0
+        self.progress_pos = 0
+        self.progress_end = 100
+        self.progress["value"] = self.progress_pos
+        self.progress["maximum"] = self.progress_end
+        self.progress_checking()
+        # self.progress.start(100)
+
+    def progress_checking(self):
+        '''simulate reading 500 bytes; update progress bar'''
+        # self.progress_pos += 10
+        self.progress_pos = self.ObjCtrl.progress_pos
+        self.progress_end = self.ObjCtrl.progress_end
+        # if(self.progress_end < self.progress_pos):
+        #     self.progress_pos = self.progress_end
+        self.progress["value"] = self.progress_pos
+        self.progress["maximum"] = self.progress_end
+        # print("AAAAAAAAAAAAAAAAAAAAAAAA",self.progress_pos)
+        if self.progress_pos < self.progress_end:
+            # read more bytes after 100 ms
+            self.progress.after(50, self.progress_checking)
 
     def main(self):
         self.notebook.bind('<<NotebookTabChanged>>', self.event_selectTab)
