@@ -1792,6 +1792,14 @@ class RecoveryCtrl():
 
         ##########################################################################
         tData = tDatas.copy()
+        title_cnt = tData.groupby('title').title.ngroups
+        if(title_cnt >= 2):
+            self.progress_end = len(list(combinations(range(0, title_cnt), 2)))
+        else:
+            self.progress_end = title_cnt
+        self.progress_pos = 0
+
+
         tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
         tData['group_sub'] = tData['point_name'].str.split('_').str[0]
         tData['seq'] = ""
@@ -1926,6 +1934,7 @@ class RecoveryCtrl():
                             print(ttcnt, 'combination rest', combination_of_title)
                             ttcnt += 1
                             tvalidData = self.update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+                            self.progress_pos = self.progress_end - len(combination_of_title)
                             break
         elif (0):
             for i, (jcount, jtype, jcomp) in enumerate(tData_grp_add):
@@ -1944,6 +1953,7 @@ class RecoveryCtrl():
                     print(ttcnt, 'combination check', combination_of_title)
                     ttcnt+=1
                     tvalidData = self.update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+                    self.progress_pos = self.progress_end - len(combination_of_title)
         else:
             for title_one, title_two in combination_of_title:
                 # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
@@ -1955,7 +1965,7 @@ class RecoveryCtrl():
             combination_of_title = list(combinations(list(df7_title.index), 2))
 
         print('combination_of_title', combination_of_title)
-        for title_one, title_two in combination_of_title:
+        for idx, (title_one, title_two) in enumerate(combination_of_title):
             # print('hehe',list(df5_list['group_sub'][df5_list_dup['title'] == title_one or df5_list_dup['title'] == title_two]))
             ret, jtype = self.extract_dup_type_between_titles(title_one, title_two, tvalidData, tData_grp_add, tIdx )
             if(ret == True):
@@ -1963,6 +1973,7 @@ class RecoveryCtrl():
                 ttcnt += 1
                 print('\t', jtype, '->', title_one, 'vs', title_two)
                 tvalidData = self.update_position_using_relative_2title(jtype, title_one, title_two, tvalidData)
+                self.progress_pos = self.progress_end - (len(combination_of_title) - idx -1 )
         # print('final tvalidData',tvalidData)
 
         tRet_Merge = pd.concat([tvalidData, tData_skip])
@@ -1971,8 +1982,9 @@ class RecoveryCtrl():
         del(tRet_Merge['type_idx'])
         print('final tvalidData',tRet_Merge)
 
-
         print("\nRRRRRRRRRRRRRR")
+        self.progress_pos = self.progress_end
+
         return retFlag, retText, tRet_Merge
 
     def calc_relative_position_on_base_type(self, tBaseType, rData):
@@ -2123,7 +2135,7 @@ class RecoveryCtrl():
         for key, value in skipData.items():
             if value.get():
                 tSkipData.append(key.split(' |')[0])
-        print(tSkipData)
+        # print(tSkipData)
 
         return nRet, tIdx, dictData, retData, tSkipData
 
@@ -2280,7 +2292,7 @@ class mainMenu_GUI():
 
     def help_about(self):
         tHLayer = tk.Tk()
-        tHLayer.title("Auto position recovery-V1.01")
+        tHLayer.title("Auto position recovery-V1.02")
         # self.root.geometry("640x400+100+100")
         tHLayer.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH/1.8,C_MENU_HEIGHT/1.8,C_MENU_POS_X*2,C_MENU_POS_Y*2 ))
         tHLayer.resizable(True, True)
@@ -2352,7 +2364,7 @@ class mainMenu_GUI():
         self.progress = tkinter.ttk.Progressbar(self.mframe[idx], orient="horizontal", length=400, mode="determinate")
         # self.progress.pack()
         # self.progress.grid(row=row + 5, sticky=tk.N)
-        self.progress.grid(row=row + 5, sticky=tk.S)
+        self.progress.grid(row=row + 5, sticky=tk.S, pady=100)
 
     def query_include(self):
         for key, value in self.button_dict.items():
