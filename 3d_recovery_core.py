@@ -58,7 +58,7 @@ radianToDegree = 180/math.pi
 
 def print_current_time(text=''):
     tnow = dt.datetime.now()
-    print('%s-%2s-%2s %2s:%2s:%2s %s' % (tnow.year, tnow.month, tnow.day, tnow.hour, tnow.minute, tnow.second, text))
+    print('%s-%2s-%2s %2s:%2s:%2s \t%s' % (tnow.year, tnow.month, tnow.day, tnow.hour, tnow.minute, tnow.second, text))
 
 
 def isRotationMatrix(R):
@@ -2140,15 +2140,16 @@ class RecoveryCtrl():
         return nRet, tIdx, dictData, retData, tSkipData
 
 C_MENU_WIDTH = 640
-C_MENU_HEIGHT = 480
+C_MENU_HEIGHT = 720
 C_MENU_POS_X = 100
 C_MENU_POS_Y = 100
+C_MENU_MAINTITLE = "3D Auto recovery position -V1.03"
 
 class mainMenu_GUI():
     def __init__(self):
         self.tt = 0
         self.root = tk.Tk()
-        self.root.title("3D Auto recovery position")
+        self.root.title(C_MENU_MAINTITLE)
         # self.root.geometry("640x400+100+100")
         self.root.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH,C_MENU_HEIGHT,C_MENU_POS_X,C_MENU_POS_Y  ))
         self.root.resizable(True, True)
@@ -2173,12 +2174,18 @@ class mainMenu_GUI():
         self.menubar.add_cascade(label="Help", menu=helpmenu)
         helpmenu.add_command(label="About", command=self.help_about)
 
-        self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-40, height=C_MENU_HEIGHT-80)
+        self.notebook = tkinter.ttk.Notebook(self.root, width=C_MENU_WIDTH-40, height=C_MENU_HEIGHT-240-80)
         # self.notebook.pack(fill=tk.BOTH, expand=True)
         self.notebook.pack()
 
         self.label2 = tk.Label(self.root, text="")
         self.label2.pack()
+
+        self.progress = tkinter.ttk.Progressbar(self.root, orient="horizontal", length=C_MENU_WIDTH-20, mode="determinate")
+        self.progress.pack()
+        # self.progress.grid(row=row + 5, sticky=tk.N)
+        # self.progress.grid(row=row + 5, sticky=tk.S, pady=100)
+
 
         # self.textlog = tk.Text(self.root, width=86)
         self.textlog = tk.Text(self.root, width=100, font=("Helvetica", 8))
@@ -2292,9 +2299,9 @@ class mainMenu_GUI():
 
     def help_about(self):
         tHLayer = tk.Tk()
-        tHLayer.title("Auto position recovery-V1.02")
+        tHLayer.title(C_MENU_MAINTITLE)
         # self.root.geometry("640x400+100+100")
-        tHLayer.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH/1.8,C_MENU_HEIGHT/1.8,C_MENU_POS_X*2,C_MENU_POS_Y*2 ))
+        tHLayer.geometry("%dx%d+%d+%d"%(C_MENU_WIDTH/1.8,(C_MENU_HEIGHT-140)/1.8,C_MENU_POS_X*2,C_MENU_POS_Y*2 ))
         tHLayer.resizable(True, True)
 
         label1 = tk.Label(tHLayer, text="Automatic position recovery\n using relative coordinate on 3D",width=30, height=3)
@@ -2361,10 +2368,10 @@ class mainMenu_GUI():
         self.trunning.grid(row=row + 1, sticky=tk.W)
 
 
-        self.progress = tkinter.ttk.Progressbar(self.mframe[idx], orient="horizontal", length=400, mode="determinate")
-        # self.progress.pack()
-        # self.progress.grid(row=row + 5, sticky=tk.N)
-        self.progress.grid(row=row + 5, sticky=tk.S, pady=100)
+        # self.progress = tkinter.ttk.Progressbar(self.mframe[idx], orient="horizontal", length=400, mode="determinate")
+        # # self.progress.pack()
+        # # self.progress.grid(row=row + 5, sticky=tk.N)
+        # self.progress.grid(row=row + 5, sticky=tk.S, pady=100)
 
     def query_include(self):
         for key, value in self.button_dict.items():
@@ -2571,6 +2578,7 @@ if __name__ == '__main__':
     if (0):
         sys.stdout = open('DebugLog-3d.txt', 'w')
     gui = mainMenu_GUI()
+    print_current_time("Start 3d accuracy\n")
     gui.main()
 
     # print(1/0)
