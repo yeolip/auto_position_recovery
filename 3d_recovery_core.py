@@ -17,6 +17,10 @@ import tkinter.ttk
 from tkinter import filedialog
 from tkinter import messagebox
 
+import openpyxl
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+
 # 12 GT점
 # 548.0606, -0.9230, 202.5364,   C
 # 548.1446, -125.9743, 202.7360, N
@@ -1023,8 +1027,18 @@ class RecoveryCtrl():
         # print(fname, fext)
         # tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
         print(fname+".xls")
+        # print(tdata)
+
+        # 엑셀파일 만들고 열기.
+        wb = Workbook()
+        ws = wb.active
+
+        for r in dataframe_to_rows(tdata, index=True, header=True):
+            ws.append(r)
+
         try:
-            tdata.to_excel(fname + ".xls")  # xls저장
+            wb.save(fname + ".xlsx")
+            # tdata.to_excel(fname + ".xlsx")  # xls저장
         except:  # <- naked except is a bad idea
             tdata.to_csv(fname+".ext", mode='w', index=False, header=False, sep=',', quotechar=" ", float_format='%.4f')
             messagebox.showerror("Save Data File", "Failed to save file\n'%s'" % (fname + ".xls"))
@@ -2046,6 +2060,7 @@ class RecoveryCtrl():
         if(retC==True):
             retData = retData.sort_values(['title', 'type_idx', 'point_name'], ascending=(True, True, True))
             del retData['type_idx']
+        # del retData['seq']
         print('\nretData', retData)
         print('EEEEEEEEEEEEEEEEEEEE')
         self.progress_pos = self.progress_end
