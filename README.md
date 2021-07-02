@@ -67,18 +67,18 @@
 <img  src = "./desc/tool_desc02.png"  width="800px" >
 <img  src = "./desc/tool_desc03.png"  width="800px" >
 
-# Rigid Transform
+## Background - Rigid Transform 설명
+<img  src = "./desc/rigid_img.png"> 
  3차원 공간에서 동일한 크기의 물체가 이동했다고 가정하면, 그 물체의 전과 후의 이동과 회전값의 최적의 값을 찾을수 있다.
  만약 전, 후의 장면에서 물체를 구성하는 점들의 좌표가 누락된 경우도 동일한 방법으로 복원이 가능하지만, 점들이 전, 후 물체의 동일한 위치에  존재하는 점이 최소 3점 이상이여야 계산이 가능하다.
  계산은 매우 간단하다. 전과 후의 물체의 좌표 묶음을 행렬로 A,B로 표현하면 아래와 같은 식이 만들어지고, 여기서 A값에 R과 T를 계산하면 B의 값을 만들수 있는 R,T의 최적값을 찾아내는 방법이다.
- 
-$$R \cdot A + T = B $$ 
-$$ err = \sum || R \cdot A^i + T - B^i ||^2  $$
+
+
 <img  src = "./desc/rigid_fomula01.png">
+
 <img  src = "./desc/rigid_fomula02.png">
 
 위와 같이 계산을 하기위해서는 우선 A, B의 mean값을 구하여,모두 원점으로 이동시킨다. 그뒤에 A와 B의 각도 R값을 구하고(SVD사용), R을 구했기에 A와 내적을 구해, T를 찾아내는 방식으로 값을 구할수 있다.  
-<img  src = "./desc/rigid_img.png">
 
 ## 참고문헌
 1. http://nghiaho.com/?page_id=671
