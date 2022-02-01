@@ -1,18 +1,26 @@
 
 # 동일 3D공간상의 rigid변환을 이용한 자동 위치 복원(Automatic position recovery using rigid transform on  same 3D space)
 
+3D marker를 이용하여, 3차원 구조를 생성해 낼수 있다면,  두 물체간의 거리, 위치관계등 다양한 것들을 검증해 해볼수 있을 것이다. 하지만 세월이 지나 이전에 생성했던 3차원 구조와 현재의 환경이 달라졌을 경우, 만약 움직이지 않은 기준 물체가 한가지라도 존재한다면, 과거 구조와 현재 구조를 합쳐 3차원으로 재구조화 할수 있다. 이 프로그램은 그 기능을 계산해주는 툴이다. 
+
+If you can create a 3D structure using a 3D marker, you can verify various things such as the distance between two objects and the positional relationship. However, if the three-dimensional structure created before and the current environment are different over time, if there is even one non-moving reference object, the three-dimensional structure can be restructured by combining the past structure and the present structure. This program is a tool that calculates its functions. We use a rigid transform to compute it.
+
+## 개발이유
 2020년도 초반에 차량안의 DSM(Driver status monitoring)개발하고 있는 제품의 Head position accuracy를 검증하는 장비를 개발하였다. DSM 제품은 이 차량안에 사람의 얼굴을 모니터링하여, 졸음운전을 하는지, 전방을 주시하지 않는지 등의 알림을 주는 기능이다. 
-검증 장비를 개발시에 디지털 카메라를 사용한 3D 측정장비([AICON의 DPA](https://www.hexagonmi.com/products/photogrammetry/moveinspect-technology/aicon-moveinspect-dpa))를 이용하여, 3차원 모델의 위치를 추출할 수 있었다. 주로 제품의 위치와 마네킹의 위치에 대한 Ground Truth를 추출하기 위해, rigid transform을 사용하였다.
-하지만 이 GT를 생성하는 과정에서 12가지 얼굴의 위치와 여러 제품들의 위치, DPA장비로 누락되는 마커와 장비 내부 변경으로 인한 마커 손상으로 인해, 많은 시간과 휴먼 계산 오류 등으로 정확도가 감소할 가능성이 존재하였다.
-이에 이 문제를 해결하기 위해, 단편적인 데이터를 재사용하고, 휴먼 계산 오류를 막기위해, rigid변환을 이용한 자동위치 복원 기능을 구현해 보았다. 
+검증 장비를 개발시에 디지털 카메라를 사용한 3D 측정장비([AICON의 DPA](https://www.hexagonmi.com/products/photogrammetry/moveinspect-technology/aicon-moveinspect-dpa))를 이용하여, 3차원 모델의 위치를 추출할 수 있었다. 주로 제품의 위치와 마네킹의 12 위치에 대한 Ground Truth를 계산해내기 위해, 하나하나 계산을 하였고,
+그 과정에서 여러가지 휴먼 계산 오류로 인한 정확도 감소와 다양한 제품의 검토등에 많은 시간이 투입되어,
+이를 줄이고자 rigid변환을 이용한 자동위치 복원 기능을 구현해 보았다. 
+
+In early 2020, we developed a device that verifies the head position accuracy of DSM (Driver Status Monitoring) in vehicles. The DSM product is a function that monitors the face of a person in the vehicle and gives a notification such as whether the driver is drowsy or not looking ahead. When developing the verification equipment, it was possible to extract the position of the 3D model using 3D measuring equipment ([AICON의 DPA](https://www.hexagonmi.com/products/photogrammetry/moveinspect-technology/aicon-moveinspect-dpa)) using a digital camera. In order to calculate the ground truth about the product position and the 12 positions of the mannequin, calculations were made one by one. Implemented automatic position restoration function using rigid transformation.
 
 ## 목적
-1. 여러 장면으로 이루어진 물체의 위치를 통합시켜 자동 생성하는 툴인 GT(Ground Truth)를 만들고 얼굴위치 인식 알고리즘 검증에 사용하려는 목적
-2. 자동화
-3. 수학적 지식 불필요
-4. 복잡한 계산 불필요
-5. 계산시 오류 제거
-6. 전처리&계산시간 단축
+1. **여러 장면으로 이루어진 물체의 위치를 통합시켜 자동 생성하는 툴인 GT(Ground Truth)를 만들고 얼굴위치 인식 알고리즘 검증에 사용하려는 목적**
+(The purpose of creating GT (Ground Truth), a tool that automatically creates by integrating the positions of objects made up of several scenes, and using it to verify the facial position recognition algorithm)
+2. **자동화** (Automation)
+4. **수학적 지식 불필요** (No mathematical knowledge required)
+5. **복잡한 계산 불필요** (No complicated calculations required)
+6. **계산시 오류 제거** (Eliminate errors in calculations)
+7. **전처리&계산시간 단축** (Reduction of pre-processing & calculation time)
 
 ## 내용설명
 <img  src = "./desc/intro.png"  width="800px" >
