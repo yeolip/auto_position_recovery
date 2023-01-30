@@ -1275,7 +1275,7 @@ class RecoveryCtrl():
         totalDf = totalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True)
         totalDf = totalDf.drop_duplicates(['title', 'point_name'], keep='first').reset_index(drop=True)
         del (totalDf['type_idx'])
-        totalDf[['group_first']] = totalDf.groupby('title').grouper.group_info[0] + 1
+        totalDf[['group_first']] = (totalDf.groupby('title').grouper.group_info[0] + 1)[0]  #.reshape(totalDf.groupby('title').grouper.group_info[0].size,1)
         print('totalDf', totalDf)
 
         retTotalDf = self.check_duplicate_and_remove(totalDf)
@@ -1283,7 +1283,7 @@ class RecoveryCtrl():
         retTotalDf['type_idx'] = retTotalDf.point_name.str.split('|').str[1:].str.join(sep='|')
         retTotalDf = retTotalDf.sort_values(['title', 'type_idx', 'point_name'], ascending=True).reset_index(drop=True)
         del (retTotalDf['type_idx'])
-        retTotalDf[['group_first']] = retTotalDf.groupby('title').grouper.group_info[0] + 1
+        retTotalDf[['group_first']] = (retTotalDf.groupby('title').grouper.group_info[0] + 1)[0]
         print('retTotalDf', len(retTotalDf), retTotalDf)
 
         return retTotalDf
@@ -1469,7 +1469,7 @@ class RecoveryCtrl():
         print("//////////",funcname(),"//////////")
         # print("//////////{:s}//////////".format(funcname()))
         tData = tDatas.copy()
-        tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
+        tData['group_first'] = (tData.groupby('title').grouper.group_info[0] + 1)[0]
         tData['group_sub'] = tData['point_name'].str.split('_').str[0]
         tData['seq'] = ""
         # print(tData)
@@ -1673,7 +1673,7 @@ class RecoveryCtrl():
         # print("//////////{:s}//////////".format(funcname()))
 
         tData = tDatas.copy()
-        tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
+        tData['group_first'] = (tData.groupby('title').grouper.group_info[0] + 1)[0]
         tData['group_sub'] = tData['point_name'].str.split('_').str[0]
         tData['seq'] = ""
         # print(tData)
@@ -1814,7 +1814,7 @@ class RecoveryCtrl():
         self.progress_pos = 0
 
 
-        tData['group_first'] = tData.groupby('title').grouper.group_info[0] + 1
+        tData['group_first'] = (tData.groupby('title').grouper.group_info[0] + 1)[0]
         tData['group_sub'] = tData['point_name'].str.split('_').str[0]
         tData['seq'] = ""
         if(tdebug):
