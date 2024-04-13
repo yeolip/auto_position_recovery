@@ -134,6 +134,23 @@ class RecoveryAlgo():
         print("*************initialize RecoveryAlgo class***********\n")
 
     def m_ProjectUserCoor(self, input_point, ref):
+        """
+        A function to project user coordinates based on input points and a reference.
+        
+        Parameters:
+        - input_point: array-like, shape (n, 3)
+            The input points to be projected.
+        - ref: array-like, shape (5, 3)
+            The reference points for the projection.
+        
+        Returns:
+        - output_point: array-like, shape (n, 3)
+            The projected output points based on the input points and reference.
+        - t_mean: array-like, shape (3,)
+            The mean of the reference points.
+        - t_axis: array-like, shape (3, 3)
+            The transformation axis matrix.
+        """
         print("//////////", funcname(), "//////////")
 
         # t_mean = np.mean(ref, axis= 0);
@@ -176,6 +193,16 @@ class RecoveryAlgo():
 
 
     def m_ProjectAbsCoor(self, P_DPA_Pts, P_DPA_Ref1):
+        """
+        A function to calculate the absolute coordinates of points based on given reference points.
+        
+        Parameters:
+        - P_DPA_Pts: numpy matrix representing points in DPA coordinates
+        - P_DPA_Ref1: numpy matrix representing the reference points in DPA coordinates
+        
+        Returns:
+        - P_Ref1_Pts: numpy matrix containing the absolute coordinates of the points
+        """
         print("//////////", funcname(), "//////////")
         # P_DPA_Pts = np.asmatrix([[391.139000000000, - 1399.38500000000,    706.558000000000],
         # [318.651000000000, - 1399.80100000000,    481.105000000000],
@@ -205,6 +232,18 @@ class RecoveryAlgo():
 
 
     def m_ProjectDispCoor(self, P_Ref1_Pts, P_Ref1_Disp):
+        """
+        A function that calculates the displacement of reference points based on given reference points and displacements. Returns the displaced points, centroid, and axis.
+
+        Parameters:
+        - P_Ref1_Pts: A matrix of reference points.
+        - P_Ref1_Disp: A matrix of displacements for the reference points.
+
+        Returns:
+        - P_Disp: Displaced points based on reference points, centroid, and axis.
+        - Centroid: The centroid of the displaced points.
+        - Axis: The axis of the displaced points.
+        """
         print("//////////", funcname(), "//////////")
         # P_Ref1_Pts = np.asmatrix(
         # [[1261.29623616261,    239.985317917590,    51.5313160178364],
@@ -244,6 +283,17 @@ class RecoveryAlgo():
 
 
     def rigid_transform_3D(self, A, B):
+        """
+        A function to calculate the rigid transformation between two sets of 3D points.
+        
+        Parameters:
+        - A: numpy array of shape (N, 3) representing the first set of 3D points
+        - B: numpy array of shape (N, 3) representing the second set of 3D points
+        
+        Returns:
+        - R: the rotation matrix for the transformation
+        - t: the translation vector for the transformation
+        """
         print("//////////",funcname(),"//////////")
         assert len(A) == len(B)
 
@@ -275,6 +325,19 @@ class RecoveryAlgo():
         return R, t
 
     def m_findTransformedPoints(self, P_Ref, P_Input, P_Target):
+        """
+        A function to find transformed points based on input and reference points.
+
+        Parameters:
+        - P_Ref: A numpy matrix representing reference points.
+        - P_Input: A numpy matrix representing input points.
+        - P_Target: A numpy matrix representing target points.
+
+        Returns:
+        - P_Transformed: A numpy matrix of transformed points.
+        - R: A numpy matrix representing rotation.
+        - T: A numpy matrix representing translation.
+        """
         print("//////////",funcname(),"//////////")
         # P_Ref = np.asmatrix(
         # [[1206.58800000000, - 52.3840000000000,    845.141000000000],
@@ -336,6 +399,16 @@ class RecoveryAlgo():
 
     # OK
     def m_MakeAbsAxis(self, P_DPA_Ref1):
+        """
+        A function to calculate the centroid and axis of a given array.
+
+        Parameters:
+        - P_DPA_Ref1: a numpy array representing points in space
+
+        Returns:
+        - centroid: a numpy array representing the centroid of the input points
+        - axis: a numpy array representing the axis of the input points
+        """
         print("//////////",funcname(),"//////////")
         # P_DPA_Ref1 = np.array([[949.852000000000, - 51.6980000000000,    731.117000000000],
         # [727.499000000000, - 53.3340000000000,    42.3240000000000],
@@ -369,6 +442,16 @@ class RecoveryAlgo():
         return centroid, axis
 
     def m_MakeDispAxis(self, P_Ref1_Disp):
+        """
+        Generate the centroid and axis of a given set of points in 3D space.
+
+        Parameters:
+        - P_Ref1_Disp (numpy.ndarray): The set of points in 3D space.
+
+        Returns:
+        - centroid (numpy.ndarray): The centroid of the set of points.
+        - axis (numpy.ndarray): The axis of the set of points.
+        """
         print("//////////",funcname(),"//////////")
         centroid = np.mean(P_Ref1_Disp, axis= 0)
 
@@ -1006,6 +1089,15 @@ class RecoveryCtrl():
         self.progress_end = 100
 
     def load_DPA_file(self, fname):
+        """
+        Load a DPA file and return the data as a pandas DataFrame.
+
+        Parameters:
+            fname (str): The file name of the DPA file to be loaded.
+
+        Returns:
+            pandas.DataFrame: The data loaded from the DPA file.
+        """
         print("//////////", funcname(), "//////////")
 
         df = pd.read_csv(fname, skipinitialspace = True, header=None)
@@ -1016,6 +1108,13 @@ class RecoveryCtrl():
         return df
 
     def save_DPA_file(self, tdatas, filename):
+        """
+        A function to save the given DataFrame to an Excel file.
+        
+        Args:
+            tdatas (DataFrame): The DataFrame to be saved.
+            filename (str): The name of the file to which the DataFrame should be saved.
+        """
         print("//////////", funcname(), "//////////")
         if(tdatas.empty is True):
             print("저장할 데이터가 없습니다.")
@@ -1065,6 +1164,19 @@ class RecoveryCtrl():
 
     #첫번째 DataFrame에서 두번째 DataFrame을 비교하여, point_name의 값이 없는 부분을 모두 (0,0,0)으로 생성함
     def compare_between_title(self, tfirst, tcomp):
+        """
+        A function to compare between two titles and perform specific operations on them.
+        
+        Parameters:
+        tfirst : DataFrame
+            The first title to compare.
+        tcomp : DataFrame
+            The title to compare against the first title.
+        
+        Returns:
+        DataFrame
+            A DataFrame containing the merged and sorted data from the input titles.
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
         tdebug = 0
         tfirst = tfirst.reset_index(drop=True)
@@ -1100,6 +1212,17 @@ class RecoveryCtrl():
 
     #중복데이터 제거 (argument1, argument2) / return argument2.drop.duplicate
     def check_duplicate(self, tdata_one, tdata_two):
+        """
+        A function to check for duplicates between two dataframes and update one of them accordingly.
+        
+        Parameters:
+            self: reference to the current instance of the class
+            tdata_one: the first dataframe to compare
+            tdata_two: the second dataframe to compare
+        
+        Returns:
+            A modified dataframe after removing duplicates
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
         tdebug = 0
         # ttext = 'DEL'
@@ -1125,6 +1248,9 @@ class RecoveryCtrl():
         return tdata_copy
 
     def check_duplicate_and_remove(self, tdatas):
+        """
+        A function that checks for duplicates in the input data, removes them, and returns the cleaned data.
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
         tdebug = 0
 
@@ -1171,6 +1297,15 @@ class RecoveryCtrl():
 
     #숫자 자릿수 리턴
     def digit_length(self, n):
+        """
+        Calculate the length of a number by counting the number of digits. 
+
+        Parameters:
+            n (int): The number to calculate the length of.
+
+        Returns:
+            int: The length of the number.
+        """
         ans = 0
         while n:
             n //= 10
@@ -1178,6 +1313,20 @@ class RecoveryCtrl():
         return ans
 
     def check_available_regid_transform(self, tfirst, tsecond, tfirst_rest):
+        """
+        A function to check the availability of certain transformations based on input data.
+
+        Parameters:
+            self: The object instance.
+            tfirst: The first set of data for transformation.
+            tsecond: The second set of data for transformation.
+            tfirst_rest: The rest of the first set of data for transformation.
+
+        Returns:
+            checkOK: A boolean indicating if the transformation is available.
+            tleft: The transformation matrix of the first set of data.
+            tright: The transformation matrix of the second set of data.
+        """
         checkOK = True
         if (len(tfirst_rest) == 0):
             checkOK = False
@@ -1194,6 +1343,16 @@ class RecoveryCtrl():
         return checkOK, tleft, tright
 
     def decrypt_divide_same_type(self, ttype, tfirst, tsecond, tdatas):
+        """
+        A function to decrypt, divide, and sort data based on specific types and titles.
+        Parameters:
+            - ttype: The type to filter the data with.
+            - tfirst: The first title to process.
+            - tsecond: The second title to process.
+            - tdatas: The data to be decrypted and sorted.
+        Returns:
+            A DataFrame containing the processed and sorted data.
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name), ttype, tfirst, tsecond)
         tdebug = 1
         tdata2 = tdatas.copy()
@@ -1289,6 +1448,22 @@ class RecoveryCtrl():
         return retTotalDf
 
     def update_OtherType_position_using_rigid(self, ttype, tfirst, tsecond, trest_first, trest_second, tCount):
+        """
+        A function that updates the position of a certain type using rigid calculations.
+
+        Parameters:
+        ttype (str): The type to be updated.
+        tfirst (DataFrame): The first set of data.
+        tsecond (DataFrame): The second set of data.
+        trest_first (DataFrame): The remaining first data.
+        trest_second (DataFrame): The remaining second data.
+        tCount (int): The count parameter.
+
+        Returns:
+        bool: Indicates if the update was successful or not.
+        DataFrame: The updated first type data.
+        DataFrame: The updated second type data.
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
         tdebug = 1
 
@@ -1372,6 +1547,16 @@ class RecoveryCtrl():
 
 
     def update_unitType_position_using_rigid(self, tdata_first_type2, tdata_second_type2):
+        """
+        A function to update unit type position using a rigid transformation.
+
+        Parameters:
+        - tdata_first_type2: The first type of data for the transformation
+        - tdata_second_type2: The second type of data for the transformation
+
+        Returns:
+        - A tuple containing a boolean indicating success, the updated first type data, and the updated second type data
+        """
         print("//////////{:s}//////////".format(sys._getframe().f_code.co_name))
         tdebug = 1
 
@@ -1460,6 +1645,18 @@ class RecoveryCtrl():
 
 
     def update_position_using_relative_2title(self, ttype, tfirst, tsecond, tdatas):
+        """
+        A function that updates position using relative to title with the given parameters.
+        
+        Parameters:
+            ttype (type): The type of the title.
+            tfirst (first): The first title.
+            tsecond (second): The second title.
+            tdatas (datas): The data to be processed.
+        
+        Returns:
+            retData: The processed data after decryption and division.
+        """
         print("//////////", funcname(), "//////////")
         # print('tdatas',tdatas)
         retData = self.decrypt_divide_same_type(ttype, tfirst, tsecond, tdatas)
@@ -1669,6 +1866,10 @@ class RecoveryCtrl():
 
 
     def preprocess(self, tDatas):
+        """
+        A function to preprocess the input data by performing various data manipulations and extractions.
+        This function takes in a pandas DataFrame 'tDatas' and returns multiple processed DataFrames.
+        """
         print("//////////",funcname(),"//////////")
         # print("//////////{:s}//////////".format(funcname()))
 
@@ -1743,6 +1944,16 @@ class RecoveryCtrl():
         return df5_list, tData_grp, tData_grp2, tvalidData
 
     def extract_dup_type_between_titles(self, tfirst, tsecond, tdatas , inputlist, tIdx):
+        """
+        A function to extract duplicate types between titles from the given data and input list.
+
+        :param tfirst: The first title
+        :param tsecond: The second title
+        :param tdatas: The input data
+        :param inputlist: The input list
+        :param tIdx: The index
+        :return: A tuple containing a boolean indicating if duplicates were found and the duplicate type
+        """
         print("//////////",funcname(),"//////////")
         tdebug = 1
         print("extract_dup_type_between_titles", tfirst, tsecond, 'inputlist=',inputlist)
@@ -2002,6 +2213,17 @@ class RecoveryCtrl():
         return retFlag, retText, tRet_Merge
 
     def calc_relative_position_on_base_type(self, tBaseType, rData):
+        """
+        Calculate the relative position of the base type based on the provided data.
+
+        Parameters:
+        - tBaseType: The base type to calculate the relative position for.
+        - rData: The data containing titles and coordinates.
+
+        Returns:
+        - retC: A boolean indicating if the calculation was successful.
+        - retData: A DataFrame containing the calculated relative positions.
+        """
         ttitles = np.asmatrix(rData['title'].drop_duplicates().reset_index(drop=True)).T.tolist()
         print(ttitles)
         self.progress_end = len(ttitles)
@@ -2067,6 +2289,9 @@ class RecoveryCtrl():
         return retC, retData
 
     def parsing_selected_data_by_tabType(self, tIdx, dictData, skipData):
+        """
+        A function to parse selected data based on the tab type, taking into account the dictionary data and skip data. Returns various data based on the tab type.
+        """
         print("//////////",funcname(),"////////// ", tIdx)
         nCnt = 0
         nRet = True
@@ -2339,6 +2564,15 @@ class mainMenu_GUI():
         self.menu_load(autoLoad=1)
 
     def event_onMouseWheel(self, event):
+        """
+        A function to handle the onMouseWheel event for different tabs.
+        
+        Parameters:
+            event: the mouse wheel event
+        
+        Returns:
+            None
+        """
         tabIdx = self.mframeIdx
         if(tabIdx == C_TAB1):
             self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
@@ -2352,6 +2586,14 @@ class mainMenu_GUI():
             self.canvas5.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def dynamic_checkBox(self, button_dict, idx, tText=""):
+        """
+        A function to dynamically create checkboxes based on the given button dictionary.
+        
+        Parameters:
+            button_dict (dict): A dictionary containing the button information.
+            idx (int): The index parameter.
+            tText (str): Optional text parameter (default is an empty string).
+        """
         self.button_dict = button_dict
         self.button_skip = dict([(str(key).split('\t')[0]+" |Skip", value) for key, value in button_dict.items()])
         # self.button_skip = dict([("Skip | "+ key.split('\t\t')[0]+ key.split('\t\t')[1], value) for key, value in button_dict.items()])
@@ -2389,6 +2631,10 @@ class mainMenu_GUI():
         # self.progress.grid(row=row + 5, sticky=tk.S, pady=100)
 
     def query_include(self):
+        """
+        A function that iterates through button_dict items and prints key if value is True. 
+        Then prints the length of button_skip list if not empty and iterates through button_skip items printing key if value is True. 
+        """
         for key, value in self.button_dict.items():
             if value.get():
                 print(key)
@@ -2400,6 +2646,10 @@ class mainMenu_GUI():
             print("")
 
     def query_exclude(self):
+        """
+        A function to query and print keys based on the values of the button_dict and button_skip dictionaries.
+        No parameters or return types specified.
+        """
         for key, value in self.button_dict.items():
             if not value.get():
                 print(key)
@@ -2425,6 +2675,9 @@ class mainMenu_GUI():
         self.progress_start()
 
     def running_result_thread(self):
+        """
+        Generate a running result thread that prints the current time, deletes text log, calculates auto recovery 3D points, handles different scenarios based on the frame index, and updates the UI state accordingly.
+        """
         print_current_time(funcname())
         self.textlog.delete('1.0', tk.END)
 
@@ -2452,6 +2705,15 @@ class mainMenu_GUI():
         self.trunning['state'] = "normal"
 
     def menu_load(self, autoLoad=0):
+        """
+        A function to load a menu with an option for auto-loading.
+        
+        Parameters:
+        - autoLoad: int, default 0
+        
+        Returns:
+        None
+        """
         if(autoLoad == 0):
             self.menu_new() #초기화
             self.filename = filedialog.askopenfilename(initialdir='./', title='Select file',
@@ -2497,6 +2759,9 @@ class mainMenu_GUI():
             return
 
     def menu_save(self):
+        """
+        A function to save menu data to a file. 
+        """
         if((self.mframeIdx != C_TAB5 and self.tresult.empty is True) or (self.mframeIdx == C_TAB5 and self.tresult_base_pos.empty is True)):
             self.alert_msg('저장할 데이터가 없습니다.')
             return
@@ -2516,6 +2781,14 @@ class mainMenu_GUI():
             return
 
     def menu_save_log(self):
+        """
+        Save the log to a selected file.
+
+        This function prompts the user to select a file to save the log to. It then attempts to save the log to the selected file. If the save is successful, it returns without any value.
+
+        Parameters:
+        - self: the instance of the class
+        """
         filename = filedialog.asksaveasfilename(initialdir='./', title='Select file',
                                                 filetypes=(("log files", "*.log"), ("all files", "*.*")))
         if filename:
@@ -2552,6 +2825,9 @@ class mainMenu_GUI():
             self.progress.after(50, self.progress_checking)
 
     def main(self):
+        """
+        A method that binds the event '<<NotebookTabChanged>>' to the event_selectTab method and starts the main event loop.
+        """
         self.notebook.bind('<<NotebookTabChanged>>', self.event_selectTab)
         self.root.mainloop()
 
